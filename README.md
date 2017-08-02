@@ -1,7 +1,7 @@
 # Gridsearch
 Complete code and data for replicating the results from:
 
-Wu, C.M., Schulz, E., Speekenbrink, M., Nelson, J.D., Meder, B. (2017). Exploration and generalization in vast spaces.
+Wu, C.M., Schulz, E., Speekenbrink, M., Nelson, J.D., Meder, B. (submitted). Exploration and generalization in vast spaces. BioRxiv preprint: https://doi.org/10.1101/171371
 
 An earlier version of this project (Experiment 2D and early modeling results) was released as:
 
