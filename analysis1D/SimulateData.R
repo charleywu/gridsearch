@@ -76,7 +76,7 @@ for (i in 1:81){ #loop thorugh participants
     #beginloop through remaining trials and make decisions based on GP preditions
     for (j in 2:(horizonValue+1)){
       if (inherits(k, 'GP')){#compute GP posterior predictions
-        post <- gpr(X.test = 1:30, theta = c(lambda, lambda, 1, 0.0001), X = X, Y = ((Y-50)/100), k = rbf) #scale Y observations to zero mean and variance of 1
+        post <- gpr(X.test = 1:30, theta = c(lambda, 1, 0.0001), X = X, Y = ((Y-50)/100), k = rbf) #scale Y observations to zero mean and variance of 1
       }else if (inherits(k, 'KalmanFilter')){
         post <- bayesianMeanTracker(x = X[j-1] -1, y = (reward[j-1] - 50) / 100, prevPost = prevPost, theta = c(kError))
         #update prevPost for the next round

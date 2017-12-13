@@ -134,11 +134,13 @@ p2<-ggplot(subset(dplot,Measure=="Max. Reward"), aes(x=trial, y=mean, colour=int
   #geom_errorbar(aes(ymin=mean-se, ymax=mean+se), width=0.7,  position=pd) +
   #geom_point(size=1.5)+
   geom_line(aes(linetype=horizon), size=.8) +
+  geom_ribbon(aes(ymin=mean-se, ymax=mean+se),alpha=0.1, color=NA) +
   ylab("Maximum Reward")+xlab("Trial")+
   theme_classic()+
   coord_cartesian(ylim=c(60,100))+
   scale_x_continuous(breaks = c(0, 2, 4, 6,8,10))+
   scale_color_manual(values = c("#7F0000", "#DA4233" , "#005F8D", "#00BCE2",  "black", "black"))+
+  scale_fill_manual(values = c("#7F0000", "#DA4233" , "#005F8D", "#00BCE2",  "black", "black"))+
   theme(text = element_text(size=16,  family="sans"), legend.position="top")+
   facet_wrap(~kernel)+
   theme(legend.position="none", strip.background=element_blank(), legend.key=element_rect(color=NA))
@@ -173,46 +175,89 @@ uniqueTiles <- function(x){ return(length(unique(x)))}
 summarydf <- ddply(d, .(id, scenario, kernel, horizon, round), summarize, uniqueTiles = uniqueTiles(x)) 
 summarydf$repeats <- (summarydf$horizon+1) - summarydf$uniqueTiles #total minus unique
 
-p3 <- ggplot(summarydf, aes(x=factor(horizon), y = uniqueTiles, fill=scenario))+
-  stat_summary(fun.y = mean, geom = "bar", position = "dodge") + 
-  stat_summary(fun.data = mean_se, geom = "errorbar", position = position_dodge(width = 0.90), width = 0.2 ) +
-  facet_wrap(~kernel) +
-  scale_fill_manual(values = c("#A20000", "#0082C1")) +
-  ylab("Number of Unique Tiles Revealed") +
-  xlab("Search Horizon") +
-  ggtitle("Unique tiles clicked (per round)") +
-  theme(text = element_text(size=18,  family="serif"))+
-  theme(legend.position="bottom", strip.background=element_blank(), legend.key=element_rect(color=NA))
-p3
-ggsave(filename = "plots/unique.pdf", plot = p3,height =3.66, width = 4.25, units = "in")
+#put both unique and repeat into the same DF
+uniqueRepeatDF <- melt(summarydf, id.vars=c("id", "scenario", "kernel", "horizon","round"), measure.vars = c("uniqueTiles", "repeats"))
 
-p4 <- ggplot(summarydf, aes(x=factor(horizon), y = repeats, fill=scenario))+
+
+p3 <- ggplot(uniqueRepeatDF, aes(x=factor(horizon), y = value, fill=scenario))+
   stat_summary(fun.y = mean, geom = "bar", position = "dodge") + 
   stat_summary(fun.data = mean_se, geom = "errorbar", position = position_dodge(width = 0.90), width = 0.2 ) +
-  facet_wrap(~kernel) +
-  scale_fill_manual(values = c("#A20000", "#0082C1")) +
-  ylab("Number of Repeat Clicks") +
+
+  facet_grid(variable~kernel) +
+  theme_classic() +
+  scale_fill_manual(values = c("#7F0000","#00BCE2")) +
+
+  scale_y_continuous(breaks = seq(0, 10, len = 6))+
+  ylab("Clicks") +
   xlab("Search Horizon") +
-  ggtitle("Repeat clicks (per round)") +
-  theme(text = element_text(size=18,  family="serif"))+
-  theme(legend.position="bottom", strip.background=element_blank(), legend.key=element_rect(color=NA))
-p4
-ggsave(filename = "plots/repeat.pdf", plot = p4, height =3.66, width = 4.25, units = "in")
+  #ggtitle("Unique and repeat clicks (per round)") +
+  theme(text = element_text(size=16,  family="sans"))+
+  theme(legend.position="none", strip.background=element_blank(), legend.key=element_rect(color=NA))
+p3
+ggsave(filename = "plots/uniqueRpeats.pdf", plot = p3, height =3, width = 5.38, units = "in")
+
+# 
+# p4 <- ggplot(summarydf, aes(x=factor(horizon), y = repeats, fill=scenario))+
+#   stat_summary(fun.y = mean, geom = "bar", position = "dodge") + 
+#   stat_summary(fun.data = mean_se, geom = "errorbar", position = position_dodge(width = 0.90), width = 0.2 ) +
+#   facet_wrap(~kernel) +
+#   scale_fill_manual(values =  c("#7F0000","#00BCE2")) +
+#   ylab("Number of Repeat Clicks") +
+#   xlab("Search Horizon") +
+#   ggtitle("Repeat clicks (per round)") +
+#   theme_classic() +
+#   theme(text = element_text(size=16,  family="sans"))+
+#   theme(legend.position="bottom", strip.background=element_blank(), legend.key=element_rect(color=NA))
+# p4
+
+# ggsave(filename = "plots/repeat.pdf", plot = p4, height =3.66, width = 4.25, units = "in")
 
 g <- ggplot(d, aes(x=y, color=scenario, fill=scenario)) +
   geom_density(alpha=.1, adjust=1) +
   facet_wrap(kernel~horizon, nrow=1) +
+  theme_classic() +
   ggtitle("Distribution of Rewards") +
-  scale_fill_manual(values = c("#A20000", "#0082C1")) +
-  scale_color_manual(values = c("#A20000", "#0082C1")) +
+  scale_fill_manual(values =  c("#7F0000","#00BCE2")) +
+  scale_color_manual(values =  c("#7F0000","#00BCE2")) +
   ylab("Density") +
   xlab("Payoff value") +
-  theme(text = element_text(size=18,  family="serif"))+
+  theme(text = element_text(size=16,  family="sans"))+
   theme(legend.position="bottom", strip.background=element_blank(), legend.key=element_rect(color=NA))
 
 g
 ggsave(filename = "plots/density.pdf", plot = g, height =3.66, width = 8.5, units = "in")
 
+
+#locality of sampling
+sampleSize <- 100000
+randomDF <- data.frame(x=sample(x = seq(0:29), size = sampleSize, replace=TRUE), kernel=c(rep("Rough",sampleSize/2), rep("Smooth", sampleSize/2)), scenario = rep(NA, sampleSize))
+randomDF <- randomDF %>%
+  mutate(delta_x = abs(x - lag(x, default = NA)))
+
+d$scenario <- factor(d$scenario)
+levels(d$scenario) <-c("Accumulators", "Maximizers")
+
+p4 <- ggplot(na.omit(d), aes(delta_x, fill = scenario, color = scenario)) + 
+  geom_histogram( aes(y = ..density..), position = 'identity', bins=30,  alpha=0.2) +
+  stat_density(data = as.data.frame(randomDF), aes(delta_x),geom="line",color='black', size = .8) +
+  scale_fill_manual(values = c("#7F0000","#005F8D")) +
+  scale_color_manual(values = c("#7F0000","#005F8D")) +
+  facet_grid(~kernel) +
+  theme_classic()+
+  ylab("Density") +
+  xlab("Distance from previous click") +
+  scale_x_continuous(breaks = scales::pretty_breaks(n = 10))+
+  #ggtitle("Locality of Sampling") +
+  theme(text = element_text(size=16,  family="sans"))+
+  theme(legend.position=c(.83,.8), strip.background=element_blank(), legend.title=element_blank(),legend.key=element_rect(color=NA))
+p4 
+
+
+ggsave(filename = "plots/localityofSampling.pdf", plot = p4,  height =2.5, width = 5.5, units = "in")
+
+aggregatedByIndividuals <- ddply(na.omit(d), .(id, scenario, kernel), summarize, meanDelta_x = mean(delta_x))
+t.test(subset(aggregatedByIndividuals, scenario=="Accumulators")$meanDelta_x, subset(aggregatedByIndividuals, scenario=="Maximizers")$meanDelta_x, var.equal=T)
+cohensD(subset(aggregatedByIndividuals, scenario=="Accumulators")$meanDelta_x, subset(aggregatedByIndividuals, scenario=="Maximizers")$meanDelta_x)
 
 
 ################################################################################################################

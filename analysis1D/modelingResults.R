@@ -220,18 +220,20 @@ mainTextModels$acq <- factor(mainTextModels$acq, levels=c("UCB", "GM", "GV"))
 se<-function(x){sd(x)/sqrt(length(x))}
 mtmDF <- ddply(mainTextModels, ~kernel+acq, summarise, newR2 =mean(R2), se=se(R2), best=mean(mainTextBest))
 
-main <- ggplot(mtmDF, aes(y=newR2, x=acq, fill=kernel)) +
+main <- ggplot(mtmDF, aes(y=newR2, x=acq, fill=kernel, color=kernel)) +
   stat_summary(fun.y = mean, geom = "bar", position = "dodge", color='black') + 
-  geom_errorbar(aes(ymin=newR2 - se, ymax=newR2 + se), width = .2, position=position_dodge((width=0.9))) +
   #geom_text(aes(label=paste0(round(best/81 * 100, digits = 0), "%"), y = 0.33 ),position = position_dodge(width=0.9)) +
   #geom_text(aes(label=best, y =newR2 + se + 0.02),position = position_dodge(width=0.9)) +
+  geom_jitter(data = mainTextModels, aes(x=acq, y = R2, fill= kernel),  color='grey', size = 1, shape=21, alpha=0.2, position=position_jitterdodge(dodge.width=0.9, jitter.width = 0.2))+
+  geom_errorbar(aes(ymin=newR2 - se, ymax=newR2 + se),color='black', width = .4, position=position_dodge((width=0.9))) +
   xlab("Sampling Strategy") +
   #scale_fill_manual(values = c("#7F0000", "#00BCE2",  "#37045F" ))+
-  scale_fill_manual(values = c(  "#F0E442", "#E69F00", "#009E73", "#56B4E9"))+
+  scale_fill_manual(values = c( "#F0E442", "#E69F00", "#009E73", "#56B4E9"))+
+  scale_color_manual(values = c( "#F0E442", "#E69F00", "#009E73", "#56B4E9"))+
   ylab("Predictive Accuracy")+ 
-  ylim(c(0,.45)) +
+  coord_cartesian(ylim=c(-0.07, 0.8))+
   theme_classic()+
-  theme(text = element_text(size=16,  family="serif"), strip.background=element_blank(), legend.key=element_rect(color=NA), legend.position="none")+
+  theme(text = element_text(size=16,  family="sans"), strip.background=element_blank(), legend.key=element_rect(color=NA), legend.position="none")+
   guides(color=FALSE, shape=FALSE)+
   ggtitle("Experiment 1")
 main
@@ -258,16 +260,20 @@ levels(modelFit$acq) <- c("UCB", "Exploit", "Explore", "EXI", "POI", "PMU", "WSL
 modelFit$kernel <- factor(modelFit$kernel, levels = c("BMT", "LBMT", "RBF", "LRBF", "Simple Strategies"))
 levels(modelFit$kernel) <- c("Mean Tracker", "Mean Tracker*", "Function Learning", "Function Learning*", "Simple Strategies")
 
+
 full <- ggplot(modelFit , aes(y=R2, x=acq, fill=interaction(environment, reward))) +
   stat_summary(fun.y = mean, geom = "bar", position = "dodge") + 
-  stat_summary(fun.data = mean_se, geom = "errorbar", position = position_dodge(width = 0.90), width = 0.2 ) +
+  geom_jitter(color='grey', shape=21, alpha=0.4, size = .8, position=position_jitterdodge(dodge.width=0.9, jitter.width=0.2))+
+  stat_summary(fun.data = mean_se, geom = "errorbar", position = position_dodge(width = 0.90), width = 0.4 ) +
+  #geom_boxplot(position="dodge")+
   #geom_text(aes(label=bestDescribed, y = 0.5), family="serif") +
   xlab("") +
   scale_fill_manual(values = c("#7F0000", "#DA4233" , "#005F8D", "#00BCE2"))+
   ylab("Predictive Accuracy")+ 
   theme_classic()+
+  scale_y_continuous(breaks = c(0, .2, .4, .6, .8))+
   theme(text = element_text(size=16,  family="sans"), strip.background=element_blank(), legend.key=element_rect(color=NA), legend.position="none")+
-  #coord_cartesian(ylim=c(0, 0.5)) +
+  coord_cartesian(ylim=c(-0.25, 0.8)) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1), legend.title=element_blank())+
   ggtitle("Experiment 1") +
   guides(shape=FALSE) +

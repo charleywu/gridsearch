@@ -2,18 +2,20 @@
 #Charley Wu 2017
 
 #load packages
-packages <- c('plyr', 'jsonlite')
+packages <- c('tidyr', 'dplyr', 'plyr', 'jsonlite')
 lapply(packages, require, character.only = TRUE)
+
 
 #Main data import function
 dataImport <- function(normalize=TRUE){
+  
   #read in data
   dat<-read.csv("ExperimentData/experimentData1D.csv")
   
   #dummy data frame
   data<-data.frame(id=numeric(), trial=numeric(), x=numeric(), y=numeric(), 
                   ymax=numeric(), kernel=numeric(), scenario=numeric(), 
-                   horizon=numeric(), round=numeric(), reward = numeric(), experimentDuration = numeric(), instructionDuration=numeric(), env=numeric())
+                   horizon=numeric(), round=numeric(), reward = numeric(), experimentDuration = numeric(), instructionDuration=numeric(), env=numeric(), delta_x=numeric())
   
   #Compile experiment  data
   for (i in 1:nrow(dat)){
@@ -53,6 +55,12 @@ dataImport <- function(normalize=TRUE){
     instructionsDuration <- rep(dat$instructionDuration[i], sum(len))
     #dummy frame
     dummy<-data.frame(id, trial, x, y, ymax, kernel, scenario, horizon, round, reward, experimentDuration, instructionsDuration, env)
+    #calculate distance between clicks
+    dummy <- dummy %>%
+      group_by(round) %>%
+      mutate(delta_x = abs(x - lag(x, default = NA)))
+    dummy <- as.data.frame(dummy)
+    dummy$delta_x[dummy$trial==1]<-NA
     #bind them together
     data<-rbind(data, dummy)
   }
@@ -72,7 +80,7 @@ dataImport <- function(normalize=TRUE){
   return(data)
 }
 
-#Max reward up until a certain trial number
+
 maxton<-function(x){
   maxn<-rep(0,length(x))
   maxn[1]<-x[1]

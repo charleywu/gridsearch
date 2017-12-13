@@ -1,5 +1,10 @@
-#Charley Wu 2016
+#Charley Wu 2017
 #Read and process participant data
+
+#load packages
+packages <- c('tidyr', 'dplyr', 'plyr', 'jsonlite')
+lapply(packages, require, character.only = TRUE)
+
 
 #Main function
 dataImport <- function(normalize=TRUE){
@@ -10,7 +15,7 @@ dataImport <- function(normalize=TRUE){
   #dummy data frame
   data<-data.frame(id=numeric(), trial=numeric(), x=numeric(), y=numeric(), 
                    z=numeric(), zmax=numeric(), kernel=numeric(), scenario=numeric(), 
-                   horizon=numeric(), round=numeric(), env=numeric())
+                   horizon=numeric(), round=numeric(), env=numeric(), delta_x=numeric())
   
   #Compile experiment  data
   for (i in 1:nrow(dat)){
@@ -47,6 +52,13 @@ dataImport <- function(normalize=TRUE){
     id<-rep(i, sum(len))
     #dummy frame
     dummy<-data.frame(id, trial, x, y, z, zmax, kernel, scenario, horizon, round, env)
+    #calculate manhattan distance between clicks
+    #calculate distance between clicks
+    dummy <- dummy %>%
+      group_by(round) %>%
+      mutate(delta_x = abs(x - lag(x, default = NA)) + abs(y - lag(y, default = NA)) ) 
+    dummy <- as.data.frame(dummy)
+    dummy$delta_x[dummy$trial==1]<-NA #set as NA for all first clicks, since it was randomly selected
     #bind them together
     data<-rbind(data, dummy)
   }

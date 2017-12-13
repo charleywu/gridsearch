@@ -163,7 +163,7 @@ gpRationalModel <- function(replications, outputfile, parameters, acq=ucb, kerne
     reward[1] <- Y <- smoothEnvironments[[envNum]][location,"y"]*100
     for (j in 2:11){ #after that, loop through remaining trials and make decisions based on GP preditions
       #compute posterior predictions
-      post <- gpr(X.test = 1:30, theta = c(lambda, lambda, 1, 0.0001), X = X, Y = ((Y-50)/100), k = kernel) #scale observed Y to zero mean, variance of 1
+      post <- gpr(X.test = 1:30, theta = c(lambda, 1, 0.0001), X = X, Y = ((Y-50)/100), k = kernel) #scale observed Y to zero mean, variance of 1
       #compute acquisition function evaluation
       utilityVec <- acq(post, pars = c(beta))
       #prevent overflow by subtracting max
@@ -197,7 +197,7 @@ gpRationalModel <- function(replications, outputfile, parameters, acq=ucb, kerne
     reward[1] <- Y <- roughEnvironments[[envNum]][location,"y"]*100
     for (j in 2:11){ #after that, loop through remaining trials and make decisions based on GP preditions
       #compute posterior predictions
-      post <- gpr(X.test = 1:30, theta = c(lambda, lambda, 1, 0.0001), X = X, Y = ((Y-50)/100), k = kernel) #scale observed Y to zero mean, variance of 1
+      post <- gpr(X.test = 1:30, theta = c(lambda, 1, 0.0001), X = X, Y = ((Y-50)/100), k = kernel) #scale observed Y to zero mean, variance of 1
       #compute acquisition function evaluation
       utilityVec <- acq(post, pars = c(beta))
       #prevent overflow by subtracting max
@@ -265,7 +265,7 @@ localGPmodel<- function(replications, outputfile, parameters, acq=ucb, kernel=rb
       distances <- abs(seq(1:30) - location) #inverse of L1 distance 
       distances[distances==0]<-1 #(where we assign distance(x,x')=1 when x=x')
       #compute GP posterior predictions
-      post <- gpr(X.test = 1:30, theta = c(lambda, lambda, 1, 0.0001), X = X, Y = ((Y-50)/100), k = kernel) #scale Y observations to zero mean and variance of 1
+      post <- gpr(X.test = 1:30, theta = c(lambda, 1, 0.0001), X = X, Y = ((Y-50)/100), k = kernel) #scale Y observations to zero mean and variance of 1
       #compute acquisition function evaluation and weight by inverse manhattan distance
       utilityVec <- acq(post, pars = c(beta)) / distances
       #prevent overflow by subtracting max
@@ -302,7 +302,7 @@ localGPmodel<- function(replications, outputfile, parameters, acq=ucb, kernel=rb
       distances <- abs(seq(1:30) - location) #inverse of L1 distance 
       distances[distances==0]<-1 #(where we assign distance(x,x')=1 when x=x')
       #compute GP posterior predictions
-      post <- gpr(X.test = 1:30, theta = c(lambda, lambda, 1, 0.0001), X = X, Y = ((Y-50)/100), k = kernel) #scale Y observations to zero mean and variance of 1
+      post <- gpr(X.test = 1:30, theta = c(lambda, 1, 0.0001), X = X, Y = ((Y-50)/100), k = kernel) #scale Y observations to zero mean and variance of 1
       #compute acquisition function evaluation and weight by inverse manhattan distance
       utilityVec <- acq(post, pars = c(beta)) / distances
       #prevent overflow by subtracting max
