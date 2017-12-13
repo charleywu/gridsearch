@@ -12,7 +12,7 @@ Wu, C.M., Schulz, E., Speekenbrink, M., Nelson, J.D., Meder, B. (2017). Mapping 
 
 The experimental environments were generated using `samplePrior1D.py` and `samplePrior2D.py`, which requires numpy, GPy, and Scikit-learn
 
-99.9% of the rest of the data analysis uses R, with code separated into \analysis1D and \analysis2D. Required packages are specified at the top of each file. Model recovery code it's own folder called \modelRecovery. Additionally, mismatch simulations are in \mismatch, where empirical simulations for 1D and 2D are in R, while the generalized mismatch simulation is in python using the bayesian optimization library (https://github.com/jmetzen/bayesian_optimization). 
+99.9% of the rest of the data analysis uses R, with code separated into \analysis1D and \analysis2D. Required packages are specified at the top of each file. Model recovery code has it's own folder called \modelRecovery. Additionally, mismatch simulations are in \mismatch, where empirical simulations for 1D and 2D are in R, while the generalized mismatch simulation is in python using the bayesian optimization library (https://github.com/jmetzen/bayesian_optimization). 
 
 
 ## Authors
