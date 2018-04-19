@@ -1,4 +1,4 @@
-#Charley Wu 2017
+#Charley Wu 2018
 #Read and process participant data
 
 #load packages

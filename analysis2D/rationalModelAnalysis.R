@@ -1,4 +1,4 @@
-#Charley Wu 2017
+#Charley Wu 2018
 #2D
 #Script to run rational models in comparison to human behavior
 
@@ -637,10 +637,10 @@ p1<- ggplot(rational5, aes(x=trial5, y=meanReward, col=Model, shape=Model))+
   scale_color_manual(values=c("black",  "#F0E442", "#E69F00", "#009E73", "#56B4E9", "#fb9a99"))+
   #scale_color_brewer(palette="Paired", direction=1)+
   coord_cartesian(ylim=c(45,85))+
-  theme(text = element_text(size=16,  family="serif"), legend.position="top")+
+  theme(text = element_text(size=12,  family="sans"), legend.position="top")+
   theme(legend.position="none", strip.background=element_blank(), legend.key=element_rect(color=NA))
 p1
-ggsave(filename = "plots/modelPerformanceAvg.pdf", plot = p1,height =2.82, width = 5.38, units = "in", useDingbats=FALSE) 
+ggsave(filename = "plots/modelPerformanceAvg.pdf", plot = p1,height =2.5, width = 4.2, units = "in", useDingbats=FALSE) 
 
 #ggsave(filename = "plots/modelPerformanceLegend.pdf", plot = p1 + theme(legend.position="right"),height =2.82, width = 8, units = "in", useDingbats=FALSE) 
 #Plot of mean Reward
@@ -675,3 +675,116 @@ p3 <- ggplot(maxDF, aes(x=Model, y=maxReward,fill=Model))+
   theme(axis.title.x=element_blank(),axis.text.x=element_blank(),axis.ticks.x=element_blank())
 p3
 ggsave(filename = "plots/modelPerformanceMax.pdf", plot = p2, height =2.5, width = 6, units = "in", useDingbats=FALSE) 
+
+#############################################################################################################################
+# DEBUG: FIGURE OUT WHY GP Model HAS SUBLINEAR REGRET
+# to read the previous simulation from disk:
+# gpDF <- read.csv("rationalModels/GPUCB-Regret.csv")
+#############################################################################################################################
+
+#Dynamic beta
+#fixed tau
+rationalGPdynamic <- function(replications, outputfile, parameters, acq=ucb, kernel=rbf, cores=7, delta=.1, argmax=TRUE){
+  #choice matrix
+  choices <- expand.grid(0:10, 0:10) #build choice matrix
+  names(choices)<-c("x1","x2")
+  #run for smooth environments
+  smoothReward <- mcmapply(1:replications, FUN=function(x){
+    #sample parameters
+    params <- parameters[sample(1:ncol(parameters), 1),]
+    lambda <- params[1]
+    beta <- params[2]
+    tau <-params[3]
+    #randomly choose environment
+    envNum <- sample(1:20,1) 
+    #1st trial is random
+    location <- sample(1:121,1)#each location as an integer from 1:121; first value is random, so treat both environments as replications of the same actions
+    #Observations
+    X1 <- choices[location,'x1']
+    X2 <- choices[location,'x2']
+    #reward
+    reward<- c()
+    reward[1] <- Y <- smoothEnvironments[[envNum]][location,"y"]*100
+    for (j in 2:101){ #after that, loop through remaining trials and make decisions based on GP preditions
+      #compute posterior predictions
+      post <- gpr(X.test = choices, theta = c(lambda, lambda, 1, 0.0001), X = cbind(X1,X2), Y = ((Y-50)/100), k = kernel) #scale observed Y to zero mean, variance of 1
+      #compute acquisition function evaluation
+      beta_t <- sqrt(2 * log(2*(j^2)*(pi^2)*(1/(6*delta))))/5 #Downscaling from Srinivas et al.
+      utilityVec <- acq(post, pars = c(beta_t))
+      if (argmax==TRUE){
+        location <- which.max(utilityVec)
+      }else{
+        #scale to max of one
+        utilityVec <- utilityVec/max(utilityVec)
+        #compute softmax choice probabilities
+        p <- exp(utilityVec/tau)
+        p <- p/sum(p)
+        #Sample next choice
+        location <- sample(1:121,1, prob=p, replace=TRUE)
+      }
+      #update reward, X1, X2, and Y 
+      reward[j] <- smoothEnvironments[[envNum]][location,"y"] * 100
+      X1 <- c(X1, choices[location, 'x1'])
+      X2 <- c(X2, choices[location, 'x2'])
+      Y <- c(Y,  reward[j])}
+    reward}, mc.preschedule = TRUE, mc.cores=cores)
+  #run for smooth environments
+  roughReward <- mcmapply(1:replications, FUN=function(x){
+    #sample parameters
+    params <- parameters[sample(1:ncol(parameters), 1),]
+    lambda <- params[1]
+    beta <- params[2]
+    tau <- params[3]
+    #randomly choose environment
+    envNum <- sample(1:20,1) 
+    #1st trial is random
+    location <- sample(1:121,1)#each location as an integer from 1:121; first value is random, so treat both environments as replications of the same actions
+    #Observations
+    X1 <- choices[location,'x1']
+    X2 <- choices[location,'x2']
+    #reward
+    reward<- c()
+    reward[1] <- Y <- roughEnvironments[[envNum]][location,"y"]*100
+    for (j in 2:101){ #after that, loop through remaining trials and make decisions based on GP preditions
+      #compute posterior predictions
+      post <- gpr(X.test = choices, theta = c(lambda, lambda, 1, 0.0001), X = cbind(X1,X2), Y = ((Y-50)/100), k = kernel) #scale observed Y to zero mean, variance of 1
+      #compute acquisition function evaluation
+      beta_t <- 2 * log(2*(j^2)*(pi^2)*(1/(6*delta)))
+      utilityVec <- acq(post, pars = c(beta_t))
+      if (argmax==TRUE){
+        location<- which.max(utilityVec)
+      }else{
+        #scale to max of one
+        utilityVec <- utilityVec/max(utilityVec)
+        #compute softmax choice probabilities
+        p <- exp(utilityVec/tau)
+        p <- p/sum(p)
+        #Sample next choice
+        location <- sample(1:121,1, prob=p, replace=TRUE)
+      }
+      #update reward, X1, X2, and Y for both smooth and rough
+      reward[j] <- roughEnvironments[[envNum]][location,"y"] * 100
+      X1 <- c(X1, choices[location, 'x1'])
+      X2 <- c(X2, choices[location, 'x2'])
+      Y <- c(Y,  reward[j])}
+    reward}, mc.preschedule = TRUE, mc.cores=cores)
+  #put into dataFrame
+  gpDF <-data.frame(trial=rep(seq(1:101), 2),
+                    Environment=c(rep("Smooth", 101), rep("Rough", 101)),
+                    meanReward = c(rowMeans(smoothReward), rowMeans(roughReward)), #reward averaged over replications
+                    meanSE = c(apply(smoothReward, 1, FUN = function(x) sd(x)/sqrt(length(x))), apply(roughReward, 1, FUN = function(x) sd(x)/sqrt(length(x)))),
+                    maxReward =  c(rowMeans(apply(smoothReward, 2, FUN=function(x) maxton(x))),  rowMeans(apply(roughReward, 2, FUN=function(x) maxton(x)))), #apply maxton function over columns (trials) to compute the max reward at each time t, and then average the max values over repliations
+                    maxSE =  c(apply(apply(smoothReward, 2, FUN=function(x) maxton(x)), 1, FUN=function(x)  sd(x)/sqrt(length(x))), apply(apply(roughReward, 2, FUN=function(x) maxton(x)), 1, FUN=function(x)  sd(x)/sqrt(length(x)))))
+  #add mmodel label
+  gpDF$Model <- rep("GP-UCB", 202)
+  #write to csv
+  if(!is.null(outputfile)){
+    write.csv(gpDF, outputfile)
+  }
+  return(gpDF)
+}
+
+
+gpDF <- rationalGPdynamic(100, outputfile = "rationalModels/GPUCB-Regret3.csv", parameters = gpPars)
+
+ggplot(gpDF, aes(x=trial, y=meanReward, color=Environment)) + geom_line()

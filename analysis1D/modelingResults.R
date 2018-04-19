@@ -1,4 +1,4 @@
-#Charley Wu, June 2017
+#Charley Wu, December 2016
 #Interpret 1D modeling results
 #1D case
 
@@ -31,6 +31,7 @@ data$varScale<- sapply(as.character(data$scale), FUN = function(x) var(fromJSON(
 
 #Sync ids to trial data
 data$id <- seq(1,81)
+
 
 #############################################################################################################################
 # IMPORT MODELING RESULTS
@@ -111,11 +112,11 @@ importModelResults <- function(dataFolder, kernels, acqFuncs){
 # Load all models so far:
 #modelFit <- read.csv('modelResults/modelFit.csv')
 #paramEstimates <- read.csv('modelResults/paramEstimates.csv')
+
 #############################################################################################################################
 modelResults <- importModelResults('modelResults/final/', c("LocalSearch",  "WSLS", "LWSLS",  "BMT",  "LBMT", "RBF", "LRBF"), c("", "GV", "GM", "UCB", "EXI", "POI", "PMU"))
-# modelResults <- importModelResults('modelResults/recoveryGPUCB/', c("LocalSearch",  "WSLS", "LWSLS",  "BMT",  "LBMT", "RBF", "LRBF"), c("", "GV", "GM", "UCB", "EXI", "POI", "PMU"))
-# modelResults <- importModelResults('modelResults/recoveryBMTUCB/', c("LocalSearch",  "WSLS", "LWSLS",  "BMT",  "LBMT", "RBF", "LRBF"), c("", "GV", "GM", "UCB", "EXI", "POI", "PMU"))
-
+# modelResults <- importModelResults('modelResults/recovery2/', c("LocalSearch",  "WSLS", "LWSLS",  "BMT",  "LBMT", "RBF", "LRBF"), c("", "GV", "GM", "UCB", "EXI", "POI", "PMU"))
+# modelResults <- importModelResults('modelResults/recoveryBMT2/', c("LocalSearch",  "WSLS", "LWSLS",  "BMT",  "LBMT", "RBF", "LRBF"), c("", "GV", "GM", "UCB", "EXI", "POI", "PMU"))
 
 #separate into overall per participant and individual cross validation blocks
 modelFit <- modelResults[[1]]
@@ -209,6 +210,48 @@ for (mod in names(modelSub)){
 #SAVE MAINTEXT RESULTS TO DISK
 #write.csv(mainTextModels,'modelResults/maintext.csv')
 
+##############################################################################################################################################
+# Correlation of R2
+###############################################################################################################################################
+#correlation test for matrix
+cor.mtest <- function(mat, ...) {
+  mat <- as.matrix(mat)
+  n <- ncol(mat)
+  p.mat<- matrix(NA, n, n)
+  diag(p.mat) <- 0
+  for (i in 1:(n - 1)) {
+    for (j in (i + 1):n) {
+      tmp <- cor.test(mat[, i], mat[, j], ...)
+      p.mat[i, j] <- p.mat[j, i] <- tmp$p.value
+    }
+  }
+  colnames(p.mat) <- rownames(p.mat) <- colnames(mat)
+  p.mat
+}
+
+#create matrix with models as row names and 
+dummyDF <- data.frame()
+for (m in levels(mainTextModels$ModelName)){
+  dummyDF <- rbind(dummyDF,  mainTextModels[mainTextModels$ModelName==m,]$R2)
+}
+rownames(dummyDF) <- levels(mainTextModels$ModelName)
+rownames(dummyDF)<- c("Assoc.Learn Exploit", "Assoc.Learn Explore", "Assoc.Learn UCB", "Assoc.Learn* Exploit", "Assoc.Learn* Explore", "Assoc.Learn* UCB", "Func.Learn* Exploit", "Func.Learn* Explore", "Func.Learn* UCB", "Func.Learn Exploit", "Func.Learn Explore", "Func.Learn UCB")
+colnames <- NA
+
+# matrix of correlations and of p-value of the correlation
+M <- cor(t(dummyDF))
+p.mat <- cor.mtest(dummyDF)
+
+col <- colorRampPalette(c("#BB4444", "#EE9988", "#FFFFFF", "#77AADD", "#4477AA"))
+#open output pdf
+pdf("plots/mainCorrelations1.pdf",height =8, width = 8, useDingbats=FALSE) 
+corrplot(M, method="circle", col=col(200),  
+         order = "hclust", type='upper',
+         addCoef.col = "black", # Add coefficient of correlation
+         tl.col="black", tl.srt=45,
+         p.mat = p.mat, sig.level = 0.05, insig = "blank")
+
+dev.off()
 #############################################################################################################################
 # PLOTS
 #############################################################################################################################
@@ -219,25 +262,43 @@ mainTextModels$kernel <- factor(mainTextModels$kernel, levels = c("BMT", "LBMT",
 mainTextModels$acq <- factor(mainTextModels$acq, levels=c("UCB", "GM", "GV"))
 se<-function(x){sd(x)/sqrt(length(x))}
 mtmDF <- ddply(mainTextModels, ~kernel+acq, summarise, newR2 =mean(R2), se=se(R2), best=mean(mainTextBest))
+boxplotDF <- ddply(mainTextModels, ~kernel+acq, summarise,d_ymin = max(min(R2), quantile(R2, 0.25) - 1.5 * IQR(R2)), d_ymax = min(max(R2), quantile(R2, 0.75) + 1.5 * IQR(R2)),
+                   d_lower = quantile(R2, 0.25),  d_middle = median(R2), d_upper = quantile(R2, 0.75),
+                   mu=mean(R2))
 
-main <- ggplot(mtmDF, aes(y=newR2, x=acq, fill=kernel, color=kernel)) +
-  stat_summary(fun.y = mean, geom = "bar", position = "dodge", color='black') + 
-  #geom_text(aes(label=paste0(round(best/81 * 100, digits = 0), "%"), y = 0.33 ),position = position_dodge(width=0.9)) +
-  #geom_text(aes(label=best, y =newR2 + se + 0.02),position = position_dodge(width=0.9)) +
-  geom_jitter(data = mainTextModels, aes(x=acq, y = R2, fill= kernel),  color='grey', size = 1, shape=21, alpha=0.2, position=position_jitterdodge(dodge.width=0.9, jitter.width = 0.2))+
-  geom_errorbar(aes(ymin=newR2 - se, ymax=newR2 + se),color='black', width = .4, position=position_dodge((width=0.9))) +
-  xlab("Sampling Strategy") +
+main <- ggplot(boxplotDF) +
+  #stat_summary(fun.y = mean, geom = "bar", position = "dodge", color='black') + 
+  geom_boxplot(aes(x =as.numeric(kernel)-0.2, ymin = d_lower, ymax = d_upper, lower = d_lower, middle = d_middle, upper = d_upper, width = 2 * 0.2, fill = kernel), stat = "identity", color='black') +
+  #whiskers
+  geom_segment(aes(x = as.numeric(kernel), y = d_ymin, xend = as.numeric(kernel), yend = d_ymax)) +
+  geom_segment(aes(x = as.numeric(kernel) - 0.1,  y = d_ymax - 0.0025, xend = as.numeric(kernel),  yend = d_ymax -0.0025)) + #top
+  geom_segment(aes(x = as.numeric(kernel) - 0.1, y = d_ymin +0.0025, xend = as.numeric(kernel), yend = d_ymin + 0.0025)) + #bottom
+  geom_point(aes(x = as.numeric(kernel)-0.2, y = mu), size = 1.3, shape=23, fill='white') +
+  geom_jitter(data=mainTextModels, aes(x = as.numeric(kernel)+.2,  y = R2,  color = kernel), 
+              width = 0.2 - 0.25 * 0.2, height = 0, size=0.4, alpha = 0.4)+
+  facet_grid(~acq)+
+  #geom_jitter(data = mainTextModels, aes(x=acq, y = R2, fill= kernel),  color='grey', size = 1, shape=21, alpha=0.2, position=position_jitterdodge(dodge.width=0.9, jitter.width = 0.2))+
+  #geom_errorbar(aes(ymin=newR2 - se, ymax=newR2 + se),color='black', width = .4, position=position_dodge((width=0.9))) +
   #scale_fill_manual(values = c("#7F0000", "#00BCE2",  "#37045F" ))+
   scale_fill_manual(values = c( "#F0E442", "#E69F00", "#009E73", "#56B4E9"))+
   scale_color_manual(values = c( "#F0E442", "#E69F00", "#009E73", "#56B4E9"))+
   ylab("Predictive Accuracy")+ 
-  coord_cartesian(ylim=c(-0.07, 0.8))+
+  coord_cartesian(ylim=c(-0.22, 0.8))+
   theme_classic()+
-  theme(text = element_text(size=16,  family="sans"), strip.background=element_blank(), legend.key=element_rect(color=NA), legend.position="none")+
+  theme(text = element_text(size=12,  family="sans"),axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(), 
+        strip.background=element_blank(),
+        strip.text = element_blank(),
+        legend.key=element_rect(color=NA),
+        panel.spacing.x=unit(0.2, "lines"),
+        panel.spacing.y=unit(1, "lines"),
+        plot.margin = unit(c(0, 0, 0, 0), "cm"),
+        legend.position="none")+
   guides(color=FALSE, shape=FALSE)+
   ggtitle("Experiment 1")
 main
-ggsave(filename = "plots/mainTextR2.pdf", main,height =2.82, width = 5.38, units ="in")
+ggsave(filename = "plots/mainTextR2.pdf", main,height =2.5, width = 4, units ="in")
 
 #FULL MODEL COMPARISON IN SI
 #Model order
@@ -259,7 +320,6 @@ modelFit$acq <- factor(modelFit$acq, levels = c("UCB", "GM", "GV", "EXI", "POI",
 levels(modelFit$acq) <- c("UCB", "Exploit", "Explore", "EXI", "POI", "PMU", "WSLS", "WSLS*", "Local Search") 
 modelFit$kernel <- factor(modelFit$kernel, levels = c("BMT", "LBMT", "RBF", "LRBF", "Simple Strategies"))
 levels(modelFit$kernel) <- c("Mean Tracker", "Mean Tracker*", "Function Learning", "Function Learning*", "Simple Strategies")
-
 
 full <- ggplot(modelFit , aes(y=R2, x=acq, fill=interaction(environment, reward))) +
   stat_summary(fun.y = mean, geom = "bar", position = "dodge") + 
@@ -283,6 +343,8 @@ full
 ggsave(filename = "plots/fullComparison1.pdf", plot = full, height =5, width = 12, units = "in") 
 
 #RANDOM MODEL BIC
+#randomModel20 <- -2 * sum(rep(log(1/121),20)) #equal probability for each 121 options for short horizon
+#randomModel40<- -2 * sum(rep(log(1/121),20)) #equal probability for each 121 options for long horizon
 randomModel120 <- -log(1/30)*120 #for full task
 
 ##Model comparison plots
@@ -298,23 +360,113 @@ ggplot(modelFit, aes(y=nLL, x=ModelName, color=reward, shape=environment)) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1))+
   ggtitle("Model Comparison")
 
+#COGSCI PLOT
+#Some rather unsavoury manipulations to put simple models and computational models on the same plot
+#1. Rename the kernel 
+
+levels(modelFit$kernel) <-c("BMT", "Local BMT","GP", "Local GP")
+p1 <- ggplot(subset(modelFit, kernel=="Local Search"| kernel=="WSLS"), aes(x=kernel, y = R2, fill=reward))+
+  stat_summary(fun.y = mean, geom = "bar", position = "dodge") + 
+  stat_summary(fun.data = mean_se, geom = "errorbar", position = position_dodge(width = 0.90), width = 0.2 ) +
+  xlab("Model") +
+  #geom_hline(yintercept = 0.068, linetype = "dotdash" )+ #Inertia model
+  ylab(expression(paste("McFadden's R"^"2"," (" %+-% "SE)") ))+ 
+  theme_bw()+
+  scale_fill_manual(values = c("#A20000", "#0082C1"),name="Reward Condition", labels=c("Average Reward","Maximum Reward")) +
+  ggtitle("Model Comparison") +
+  #scale_x_discrete("",labels=c("UCB", "PMU", "POI"))+
+  theme(text = element_text(size=24,  family="serif"), strip.background=element_blank(), legend.key=element_rect(color=NA), legend.position="bottom")
+p1
+ggsave(filename = "plots/R2plota.pdf", plot = p1, height =4.33, width = 3, units = "in") 
+
+p2  <- ggplot(subset(modelFit, acq=="GV" | acq=="GM" |acq=="UCB") , aes(x=acq, y = R2))+
+  stat_summary(fun.y = mean, geom = "bar", position = "dodge") + 
+  stat_summary(fun.data = mean_se, geom = "errorbar", position = position_dodge(width = 0.90), width = 0.2 ) +
+  facet_wrap(~kernel, nrow = 1) +
+  xlab("Model") +
+  coord_cartesian(ylim=c(0,.45))+
+  #geom_hline(yintercept = 0.068, linetype = "dotdash" )+ #Inertia model
+  ylab(expression(paste("McFadden's R"^"2"," (" %+-% "SE)") ))+ 
+  theme_bw()+
+  scale_fill_manual(values = c("#A20000", "#0082C1"),name="Reward Condition", labels=c("Average Reward","Maximum Reward")) +
+  ggtitle("Model Comparison") +
+  #scale_x_discrete("",labels=c("UCB", "PMU", "POI"))+
+  theme(text = element_text(size=24,  family="serif"), strip.background=element_blank(), legend.key=element_rect(color=NA), legend.position="bottom")
+p2
+ggsave(filename = "plots/R2pnas.pdf", plot = p2, height =4.33, width = 12, units = "in") 
+
+
+
+######T-tests########
+#model comparison
+t.test(subset(modelFit, acq=="GM" & kernel=="WSLS")$R2, mu=0)
+t.test(subset(modelFit, acq=="UCB" & kernel=="Local Search")$R2, subset(modelFit, acq=="UCB" & kernel=="RBF")$R2, var.equal=TRUE)
+t.test(subset(modelFit, acq=="UCB" & kernel=="LRBF")$R2, subset(modelFit, acq=="UCB" & kernel=="RBF")$R2, var.equal=TRUE)
+t.test(subset(modelFit, acq=="UCB" & kernel=="Local GP")$R2, subset(modelFit, acq=="UCB" & kernel=="Local Search")$R2, var.equal=TRUE)
+  
+#Payoff conditions and environment type
+t.test(subset(modelFit, reward=="Cumulative")$R2, subset(modelFit, reward=="Best")$R2, var.equal=TRUE)
+t.test(subset(modelFit, environment=="Smooth")$R2, subset(modelFit, environment=="Rough")$R2, var.equal=TRUE)
+
+
 #############################################################################################################################
 # Parameter Estimates
 #############################################################################################################################
 
 #GP-UCB
 #Melt to separate out parameters
-mDF <- melt(modelFit, id.vars = c("acq", "kernel", "reward", "environment", "R2", "bonus"), measure.vars = c("lambda", "beta", "tau"))
+mDF <- melt(subset(modelFit, kernel=='RBF' & acq == 'UCB'), id.vars = c("acq", "kernel", "reward", "R2", "bonus"), measure.vars = c("lambda", "beta", "tau"))
+boxplotDF <- ddply(mDF, ~variable+acq+kernel, summarise,
+                   d_ymin = max(min(value), quantile(value, 0.25) - 1.5 * IQR(value)), 
+                   d_ymax = min(max(value), quantile(value, 0.75) + 1.5 * IQR(value)),
+                   d_lower = quantile(value, 0.25),  d_middle = median(value), d_upper = quantile(value, 0.75),
+                   mu=mean(value))
+
+p<- ggplot(boxplotDF) +
+  #stat_summary(fun.y = mean, geom = "bar", position = "dodge", color='black') + 
+  geom_boxplot(aes(x =as.numeric(variable)-0.2, ymin = d_lower, ymax = d_upper, lower = d_lower, middle = d_middle, upper = d_upper, width = 2 * 0.2, fill = variable), stat = "identity", color='black', fill = "#009E73") +
+  #whiskers
+  geom_segment(aes(x = as.numeric(variable), y = d_ymin, xend = as.numeric(variable), yend = d_ymax)) +
+  geom_segment(aes(x = as.numeric(variable) - 0.1,  y = d_ymax, xend = as.numeric(variable),  yend = d_ymax )) + #top
+  geom_segment(aes(x = as.numeric(variable) - 0.1, y = d_ymin, xend = as.numeric(variable), yend = d_ymin)) + #bottom
+  geom_point(aes(x = as.numeric(variable)-0.2, y = mu), size = 1.3, shape=23, fill='white') +
+  geom_jitter(data=mDF, aes(x = as.numeric(variable)+.2,  y = value), color="#009E73", size=1, alpha = 0.6, width = 0.2 - 0.25 * 0.2)+
+  theme_classic()+
+  ylab("Estimate")+
+  theme(text = element_text(size=12,  family="sans"),axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(), 
+        strip.background=element_blank(),
+        strip.text = element_blank(),
+        legend.key=element_rect(color=NA),
+        panel.spacing.x=unit(0.2, "lines"),
+        panel.spacing.y=unit(1, "lines"),
+        plot.margin = unit(c(0, 0, 0, 0), "cm"),
+        legend.position="none")+
+  guides(color=FALSE, shape=FALSE)+
+  scale_y_continuous(trans="log10", breaks = c(0.01, 0.1, 1, 10)) +
+  annotation_logticks(base=10, sides='l')+
+  coord_cartesian(ylim=c(0.005,50))
+#ggtitle("Parameter Estimates: Function Learning") +
+print(p)
+
+min(boxplotDF$d_ymin)
+max(boxplotDF$d_ymax)
+ggsave(filename = "plots/paramEstimates.pdf", plot = p, height =2, width = 4, units = "in") 
+
+#individual variance
+#Melt to separate out parameters
+individualDF <- melt(paramEstimates, id.vars = c("participant", "acq", "kernel", "reward", "environment", "R2", "bonus"), measure.vars = c("lambda", "beta", "tau"))
 #Select which acq and which kernel to display
 k<- "RBF"
 a<- "UCB"
-
-p<- ggplot(subset(mDF, kernel==k &acq==a), aes(y=value, x=NA, color=variable)) +
-  geom_jitter(aes(color=variable), size=1, alpha=.6, width = 0.2) +
-  geom_boxplot(aes(fill=variable),width=0.5, color="black", outlier.shape=NA, lwd=0.5, alpha=0) +
+p<- ggplot(subset(individualDF, kernel==k &acq==a), aes(y=value, x=participant, color=variable)) +
+  geom_boxplot(fill=NA,width=0.5, color="black", outlier.shape=NA, lwd=0.5) +
+  stat_summary(fun.data = "mean_cl_boot", alpha=.2, size = 0.4, lwd = 1) + #mean
+  #geom_jitter(aes(fill=variable), shape=21, size=1,color='black', alpha=.4, width = 0.2) +
   #geom_boxplot(aes(fill=variable), alpha = 0.3, outlier.shape=NA) +
-  stat_summary(color='black',fun.y=mean, geom="point", shape=5, size=2, stroke = 1) + #mean
-  xlab("Parameter") +
+  #stat_summary(fun.y=mean, geom="point", 21, size=1, alpha=0.2) + #mean
+  #xlab("Parameter") +
   ylab("Estimate")+ 
   scale_fill_brewer(palette="Set1") +
   scale_color_brewer(palette="Set1") +
@@ -322,16 +474,15 @@ p<- ggplot(subset(mDF, kernel==k &acq==a), aes(y=value, x=NA, color=variable)) +
   #annotation_logticks(base=10, sides='l')+
   coord_cartesian(ylim=c(0.005,3.5))+
   theme_classic()+
-  theme(text = element_text(size=14,  family="serif"),strip.background=element_blank(), legend.key=element_rect(color=NA), legend.position="None") +
-  scale_x_discrete("",labels=c("")) + 
+  theme(text = element_text(size=16,  family="sans"),strip.background=element_blank(), legend.key=element_rect(color=NA), legend.position="None") +
+  #scale_x_discrete("",labels=c("")) + 
   facet_grid(~variable)
 print(p)
 
-ggsave(filename = "plots/paramEstimates.pdf", plot = p, height =2.7, width = 3, units = "in") 
-
-
+ggsave(filename = "plots/individualparamEstimates.pdf", plot = p, height =2.82, width = 5.38, units = "in") 
 
 #BMT-UCB
+
 #Melt to separate out parameters
 mDF <- melt(modelFit, id.vars = c("acq", "kernel", "reward", "environment", "R2", "bonus"), measure.vars = c("kError", "beta", "tau"))
 #Select which acq and which kernel to display
@@ -351,3 +502,77 @@ p<- ggplot(subset(mDF, kernel==k &acq==a), aes(y=value, x=variable, fill=environ
   scale_x_discrete("",labels=c("Error Variance", bquote(paste(beta, " (Exploration Bonus)")),bquote(paste(tau, " (Temperature)"))))
 #facet_wrap(~environment)
 print(p)
+
+
+#Mean-based estimates
+bestDF<- subset(paramEstimates, kernel=="RBF" & acq=="UCB")
+bestDF <- ddply(bestDF, ~participant+reward+environment, summarize, beta=mean(beta), lambda = mean(lambda), tau=mean(tau))
+#t-tests
+t.test(subset(bestDF, environment=="Rough")$lambda, mu=1) #lambda
+cohensD(subset(bestDF, environment=="Rough")$lambda, mu=1)
+t.test(subset(bestDF, environment=="Smooth")$lambda, mu=2) #lambda
+cohensD(subset(bestDF, environment=="Smooth")$lambda, mu=2)
+
+#BETA - each individual estimate
+t.test(bestDF$beta, mu=exp(-5))
+cohensD(bestDF$beta, mu=exp(-5))
+t.test(subset(bestDF, environment=="Smooth")$beta, subset(bestDF, environment=="Rough")$beta, var.equal=TRUE) #beta
+t.test(subset(bestDF, reward=="Cumulative")$beta, subset(bestDF, reward=="Best")$beta, var.equal=TRUE) #beta
+t.test(subset(paramEstimates, kernel=="RBF" & acq=="UCB" & reward=="Cumulative")$beta, subset(paramEstimates, kernel=="RBF" & acq=="UCB" & reward=="Best")$beta, var.equal=TRUE) #beta
+t.test(subset(paramEstimates, kernel=="RBF" & acq=="UCB" &  environment=="Rough")$beta, subset(paramEstimates, kernel=="RBF" & acq=="UCB" &  environment=="Smooth")$beta, var.equal=TRUE) #beta
+t.test(subset(paramEstimates, kernel=="RBF" & acq=="UCB" &  horizon==5)$beta, subset(paramEstimates, kernel=="RBF" & acq=="UCB" &  horizon==10)$beta, var.equal=TRUE) #beta
+
+#BETA - Averaged over subject
+t.test(subset(summarizedBetaDF, environment=="Smooth")$meanBeta, subset(summarizedBetaDF, environment=="Rough")$meanBeta, var.equal=TRUE) #beta
+t.test(subset(summarizedBetaDF, reward=="Cumulative")$meanBeta, subset(summarizedBetaDF, reward=="Best")$meanBeta, var.equal=TRUE) #beta
+#average beta for each participant for each horizon length
+horizonBeta <- ddply(subset(paramEstimates, kernel=="RBF" & acq=="UCB"), ~participant+reward+environment+horizon, summarize, meanBeta=mean(beta)) 
+t.test(subset(horizonBeta, horizon==5)$meanBeta, subset(horizonBeta, horizon==10)$meanBeta, paired=TRUE)
+
+#tau
+mean(bestDF$tau)
+t.test(subset(bestDF, reward=="Cumulative")$tau, subset(bestDF, reward=="Best")$tau, var.equal=TRUE) #beta
+t.test(subset(paramEstimates, kernel=="RBF" & acq=="UCB" &  reward=="Best")$tau, subset(paramEstimates, kernel=="RBF" & acq=="UCB" &  reward=="Cumulative")$tau, var.equal=TRUE) #tau
+t.test(subset(paramEstimates, kernel=="RBF" & acq=="UCB" &  horizon==5)$tau, subset(paramEstimates, kernel=="RBF" & acq=="UCB" &  horizon==10)$tau, var.equal=TRUE) 
+t.test(subset(paramEstimates, kernel=="RBF" & acq=="UCB" &  environment=="Smooth")$tau, subset(paramEstimates, kernel=="RBF" & acq=="UCB" &  environment=="Rough")$tau, var.equal=TRUE) 
+
+###Median based tests
+
+bestDF<- subset(paramEstimates, kernel=="RBF" & acq=="UCB")
+bestDF <- ddply(bestDF, ~participant+reward+environment, summarize, beta=median(beta), lambda = median(lambda), tau=median(tau))
+
+#lambda
+wtest <- wilcox.test(subset(bestDF, environment=="Smooth")$lambda,subset(bestDF, environment=="Rough")$lambda)
+wtest
+qnorm(wtest$p.value) #z-statistic
+qnorm(wtest$p.value)/sqrt(81) #effect size; r value
+median(subset(bestDF, environment=="Smooth")$lambda)
+median(subset(bestDF, environment=="Rough")$lambda)
+
+wtest<- wilcox.test(subset(bestDF, environment=="Smooth")$lambda, mu = 2)
+wtest
+qnorm(wtest$p.value) #z-statistic
+qnorm(wtest$p.value)/sqrt(length(subset(bestDF, environment=="Smooth")$lambda)) #effect size; r value
+
+wtest<- wilcox.test(subset(bestDF, environment=="Rough")$lambda, mu = 1)
+wtest
+qnorm(wtest$p.value) #z-statistic
+qnorm(wtest$p.value)/sqrt(length(subset(bestDF, environment=="Rough")$lambda)) #effect size; r value
+            
+#beta
+median(bestDF$beta)
+wtest<- wilcox.test(bestDF$beta, mu = exp(-5))
+wtest
+qnorm(wtest$p.value) #z-statistic
+qnorm(wtest$p.value)/sqrt(length(bestDF$beta)) #effect size; r value
+
+wtest<- wilcox.test(subset(bestDF, reward=="Cumulative")$beta, subset(bestDF, reward="Best")$beta)
+wtest
+
+wtest<- wilcox.test(subset(bestDF,environment=="Rough")$beta, subset(bestDF, environment=="Smooth")$beta)
+wtest
+qnorm(wtest$p.value) #z-statistic
+qnorm(wtest$p.value)/sqrt(81) #effect size; r value
+
+
+

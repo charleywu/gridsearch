@@ -1,4 +1,4 @@
-#Charley Wu 2017
+#Charley Wu 2016
 #Script to run rational models in comparison to human behavior
 
 #############################################################################################################################
@@ -564,6 +564,11 @@ localbmtDF <- read.csv("rationalModels/localBMTUCBmedianTau.csv")
 rationalDF <- rbind(randomDF, gpDF, lgpDF, bmtDF, localbmtDF)
 rationalDF$Environment <- factor(rationalDF$Environment, levels=c("Rough", "Smooth"))
 
+#convert to 5 round average
+#rationalDF$trial5 <- round(rationalDF$trial/5)*5
+#rationalDF$trial5 < ifelse(rationalDF$trial5<5,0,rationalDF$trial5)
+#rational5DF <- ddply(rationalDF, ~trial5+Model+Environment, summarise, meanReward=mean(meanReward), maxReward=mean(maxReward))
+
 #add human data
 source('dataMunging.R') #source data import function
 d <- dataImport(normalize=FALSE)
@@ -590,10 +595,10 @@ p1<- ggplot(plotDF, aes(x=trial, y=meanReward, col=Model, shape=Model))+
   #scale_color_brewer(palette="Paired", direction=1)+
   coord_cartesian(ylim=c(45,85))+
   scale_x_continuous(breaks = c(0, 2, 4, 6,8,10))+
-  theme(text = element_text(size=16,  family="serif"), legend.position="top")+
+  theme(text = element_text(size=12,  family="sans"), legend.position="top")+
   theme(legend.position="none", strip.background=element_blank(), legend.key=element_rect(color=NA))
 p1
-ggsave(filename = "plots/modelPerformanceAvg.pdf", plot = p1, height =2.82, width = 5.38, units = "in", useDingbats=FALSE) 
+ggsave(filename = "plots/modelPerformanceAvg.pdf", plot = p1, height =2.5, width = 4.2, units = "in", useDingbats=FALSE) 
 
 #Plot of Max Reward
 maxDF <- subset(plotDF, trial==10)

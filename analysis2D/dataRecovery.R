@@ -1,12 +1,12 @@
 #Functions for Data recovery of GP models
-#Charley Wu September 2016
+#Charley Wu September 2018
 
 packages <- c('plyr', 'jsonlite', 'reshape', 'DEoptim', "matrixcalc", "fields", 'gplots', 'RColorBrewer', 'ggplot2', 'gridExtra')
 lapply(packages, require, character.only = TRUE)
 source("Models.R")
 
 ##############################################################################################################
-#Data recovery 
+#Data recovery (cmd+shift+c to uncomment multiple lines)
 ##############################################################################################################
 
 ###Multiplot function #######
@@ -47,6 +47,9 @@ multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
   }
 }
 #Data recovery of subject data
+
+#hm.palette <- colorRampPalette(brewer.pal(9, 'YlOrRd'), space='Lab')
+
 #Choose a subject id, a round, and the specific trial to recover
 #Specify, kernel type, acquisition function, and parameters
 #yields the revealed rewards, the posterior beliefs about the space, and the softmax probability surface of the acquisition function
@@ -176,7 +179,7 @@ GPPosterior <- function(subject=1, r=1, trial = 20, kernel=rbf,kernelName="RBF",
     roundedBeta <- round(beta, 2)
     plottitle<- bquote(paste(.(acqName), " Prediction (", beta, "=", .(roundedBeta), "; ", tau, "=", .(roundedTau), ")"))
   }
-  p3<-ggplot(d3, aes(x = X1, y = X2, fill = value)) + 
+  p4<-ggplot(d4, aes(x = X1, y = X2, fill = value)) + 
     geom_tile(color='black', width=1, height=1) +
     theme_bw() +
     xlim(0.5,11.5) +
@@ -220,6 +223,45 @@ animatedGifs <- function(subjId, round, kernel, acq, kernelName, acqName, plotna
   }
   graphics.off()
 }
+
+
+
+###Candidates for paper (selected for illustrative purposes) ###
+#Kalman Filter
+GPPosterior(subject=32, r=4, trial=19, kernel=NA, kernelName="KF", acq=ucb, acqName="UCB", parVec = exp(c(4,4)), beta=.1, tau = .01)
+#RBF
+GPPosterior(subject=39, r=5, trial=1, kernel=rbf, kernelName="RBF", acq=ucb, acqName="UCB", parVec = c(.5,.5, 1, 0.001), beta=.1, tau = .1)
+#Linear kernel
+GPPosterior(subject=32, r=4, trial=2, kernel=lingp, kernelName="Linear", acq=ucb, acqName="UCB", parVec = exp(c(4,4)), beta=1, tau = 1)
+
+GPPosterior(subject=32, r=4, trial=19, kernel=oru, acq=probofimp, parVec =c(.56,.56,1,.0001), beta=0.2, tau = 0.01)
+GPPosterior(subject=15, r=5, trial=16, kernel=oru, acq=ucb, parVec =c(.5,.5,1,1), beta=15, tau = 1)
+GPPosterior(subject=7, r=4, trial=15, kernel=rbf, acq=pmug, parVec =c(1,1,1,1), beta=.2, tau = 1)
+GPPosterior(subject=32, r=4, trial=1, kernel=oru, acq=ucb, parVec =c(.56,.56,1,.0001), beta=1, tau = 1)
+GPPosterior(subject=79, r=2, trial=16, kernel=oru,kernelName="Oru", acq=ucb,acqName="UCB", parVec =c(.56,.56,1,.0001), beta=1, tau = .01)
+GPPosterior(subject=32, r=4, trial=19, kernel=NA, kernelName="KF", acq=ucb, acqName="UCB", parVec = exp(c(4,4)), beta=.1, tau = .01)
+
+#manual animated kalman filter
+for (t in 1:20){
+  graphics.off()
+  png(filename = paste0(getwd(),"/plots/gifs/Kalman",sprintf("%03d", t),'.png',sep=""))
+  p<-GPPosterior(subject=32, r=4, trial=t, kernel=NA, kernelName = "KF", acq=ucb,acqName="UCB", parVec =exp(c(0,0)), beta=exp(0), tau = exp(0))
+}
+graphics.off()
+
+#manual animated kalman filter
+for (t in 1:20){
+  graphics.off()
+  png(filename = paste0(getwd(),"/plots/gifs/linear",sprintf("%03d", t),'.png',sep=""))
+  p<-GPPosterior(subject=32, r=4, trial=t, kernel=lingp, kernelName = "linear", acq=ucb,acqName="UCB", parVec =exp(c(0,0)), beta=exp(0), tau = exp(0))
+}
+graphics.off()
+
+
+##Animated gifs
+animatedGifs(39,5, rbf, ucb,"RBF", "UCB", "39RBFUCB5.")
+#image magick call
+#convert -delay 50 -loop 0 *.png Subj13.gif
 
 
 #Predictions for custom data
@@ -268,11 +310,13 @@ customPredictions <- function(X, y, kernel=rbf,kernelName="RBF", acq = ucb, acqN
   }
   #DEBUG
   plotTitle <- "Inferred Value"
-  p1<-ggplot(d1, aes(x = X1, y = X2, fill = value)) + 
+  p1<-ggplot(d1, aes(x = X2, y = X1, fill = value)) + 
     geom_tile(color='black', width=1, height=1) +
     theme_bw() +
     xlim(0.5,11.5) +
     ylim(0.5,11.5) + 
+    scale_y_reverse() +
+    scale_x_continuous(position = "top")+
     coord_equal() +
     ggtitle(plotTitle) +
     #scale_fill_gradientn(name = "Exp. Payoff", colours = hm.palette(100),values = seq(0, 100, length=9)) +
@@ -290,10 +334,37 @@ customPredictions <- function(X, y, kernel=rbf,kernelName="RBF", acq = ucb, acqN
           panel.background = element_blank(),
           panel.border=element_blank(), 
           plot.margin=unit(c(0,0,0,0),"mm"))
-  
-  #Plot 2. Softmax surface of acquisition function
-  d2<- melt(matrix((utilityVec*100)+50, nrow=11, ncol=11)) #IMPORTANT: check that rescaling is correct
+  #plot 2. Estimated uncertainty
+  d2 <- melt(matrix((out[,2])* 100, nrow=11, ncol=11))
   names(d2) <- c('X1', 'X2', 'value')
+  plotTitle <- "Estimated uncertainty"
+  p2<-ggplot(d2, aes(x = X2, y = X1, fill = value)) + 
+    geom_tile(color='black', width=1, height=1) +
+    theme_bw() +
+    xlim(0.5,11.5) +
+    ylim(0.5,11.5) + 
+    scale_y_reverse() +
+    scale_x_continuous(position = "top")+
+    coord_equal() +
+    ggtitle(plotTitle) +
+    #scale_fill_gradientn(name = "Exp. Payoff", colours = hm.palette(100),values = seq(0, 100, length=9)) +
+    scale_fill_distiller(palette = "Spectral", na.value = 'white',  breaks=c(25,50,75))+
+    guides(ticks=element_line(color='black'))+
+    labs(fill= bquote(paste("E","(x)")))+
+    theme(axis.title.x=element_blank(),
+          axis.text.x=element_blank(),
+          axis.ticks.x=element_blank(),
+          axis.title.y=element_blank(),
+          axis.text.y=element_blank(),
+          axis.ticks.y=element_blank(),
+          panel.grid.major = element_blank(), 
+          panel.grid.minor = element_blank(),
+          panel.background = element_blank(),
+          panel.border=element_blank(), 
+          plot.margin=unit(c(0,0,0,0),"mm"))
+  #Plot 3. Softmax surface of acquisition function
+  d3<- melt(matrix((utilityVec*100)+50, nrow=11, ncol=11)) #IMPORTANT: check that rescaling is correct
+  names(d3) <- c('X1', 'X2', 'value')
   #maxValue <- subset(d2, value==max(d2$value))
   #d2<- round(d2, 3)
   #plot title
@@ -310,12 +381,14 @@ customPredictions <- function(X, y, kernel=rbf,kernelName="RBF", acq = ucb, acqN
   }
   #DEBUG
   plottitle <- "Upper Confidence Bound"
-  p2<-ggplot(d2, aes(x = X1, y = X2, fill = value)) + 
+  p3<-ggplot(d3, aes(x = X2, y = X1, fill = value)) + 
     geom_tile(color='black', width=1, height=1) +
     theme_bw() +
     xlim(0.5,11.5) +
     ylim(0.5,11.5) + 
     coord_equal() +
+    scale_y_reverse() +
+    scale_x_continuous(position = "top")+
     ggtitle(plottitle) +
     #scale_fill_gradientn(name='P(choice)',colours = hm.palette(100),values = seq(0, 1, length=9)) +
     scale_fill_distiller(palette = "Spectral", na.value = 'white' )+
@@ -331,18 +404,20 @@ customPredictions <- function(X, y, kernel=rbf,kernelName="RBF", acq = ucb, acqN
           panel.background = element_blank(),
           panel.border=element_blank(), 
           plot.margin=unit(c(0,0,0,0),"mm"))
-    #p2 <- p2 + annotate("text", x =maxValue$X1, y = maxValue$X2, label = "X") 
-  d3 <- melt(matrix(p, nrow=11, ncol=11))
-  names(d3) <- c('X1', 'X2', 'value')
+    #p3 <- p3 + annotate("text", x =maxValue$X1, y = maxValue$X2, label = "X") 
+  d4 <- melt(matrix(p, nrow=11, ncol=11))
+  names(d4) <- c('X1', 'X2', 'value')
   plotTitle <- bquote(paste(" Softmax Choice Probabilities(", tau, "=", .(roundedTau),")"))
   #DEBUG
   plotTitle <- "Choice Probability"
-  p3 <- ggplot(d3, aes(x = X1, y = X2, fill = value)) + 
+  p4 <- ggplot(d4, aes(x = X2, y = X1, fill = value)) + 
     geom_tile(color='black', width=1, height=1) +
     theme_bw() +
     xlim(0.5,11.5) +
     ylim(0.5,11.5) + 
     coord_equal() +
+    scale_y_reverse() +
+    scale_x_continuous(position = "top")+
     ggtitle(plotTitle) +
     #scale_fill_gradientn(name='P(choice)',colours = hm.palette(100),values = seq(0, 1, length=9)) +
     scale_fill_distiller(palette = "Spectral", na.value = 'white' )+
@@ -359,7 +434,7 @@ customPredictions <- function(X, y, kernel=rbf,kernelName="RBF", acq = ucb, acqN
           panel.border=element_blank(), 
           plot.margin=unit(c(0,0,0,0),"mm"))
   
-  return(multiplot(p1, p2,p3, cols=3))
+  return(multiplot(p1,p2,p3,p4, cols=4))
   #return(grid.arrange(p1,p2,p3,cols=3))
 }
 
@@ -375,5 +450,22 @@ y <- c(6, 2, 3, 2, 6, 5, 3, 8, 8,10)
 z <- c(43, 29, 24, 15, 18, 31, 26, 20, 75,53)
 Figure2 <- customPredictions(as.matrix(cbind(x,y)),z, kernel=rbf, kernelName="RBF", acq=ucb,acqName="UCB", parVec=c(lambdaMed,lambdaMed, 1, .0001), beta=betaMed, tau=tauMed)
 
-ggsave("plots/modelOverview.pdf", Figure2, width = 7.64, height = 4.72, units = 'in')
+ggsave("plots/modelOverview2.pdf", Figure2, width = 7.64, height = 4.72, units = 'in')
 
+# 
+# x1 <- c(3,3,8,2,1,2,3,4,8,2,3)
+# x2<- c(6,2,2,6,7,7,7,7,7,8,8)
+# y <- c(62,48,23,57,49,84,74,46,41,71,53)
+# 
+# left <- customPredictions(as.matrix(cbind(x1, x2)), y, kernel=rbf, kernelName="RBF", acq=ucb,acqName="UCB", parVec=c(lambdaMed,lambdaMed, 1, .0001), beta=betaMed, tau=tauMed)
+# #with median population estimates
+# right <- customPredictions(as.matrix(cbind(c(3,3,8,2,1,2,3,4,8,2,3), c(6,2,2,6,7,7,7,7,7,8,8))), c(62,48,23,57,49,84,74,46,41,71,53), kernel=rbf, kernelName="RBF", acq=ucb,acqName="UCB", parVec=c(0.5553105,0.5553105, 1, .0001), beta=0.4683883, tau=0.02919533)
+# #right <- customPredictions(as.matrix(cbind(c(3,3,8,2,1,2,3,4,8,2,3), c(6,2,2,6,7,7,7,7,7,8,8))), c(62,48,23,57,49,84,74,46,41,71,53), kernel=rbf, kernelName="RBF", acq=ucb,acqName="UCB", parVec=c(1,1, 1, .0001), beta=.2, tau=.02) #with useful parameters
+# 
+# x <- c(10, 6, 4, 1, 4, 7, 8, 8, 10, 9, 8, 8, 10, 1, 3, 2, 3, 5, 7, 3)
+# y <- c(2, 5, 7, 2, 1, 1, 5, 9, 9, 9, 8, 6, 7, 7, 3, 5, 10, 3, 3, 7)
+# z <- c(40, 20, 55, 43, 32, 28, 34, 66, 55, 59, 79, 58, 76, 36, 13, 34, 35, 6, 9, 49)
+# Figure2 <- customPredictions(as.matrix(cbind(x,y)),z, kernel=rbf, kernelName="RBF", acq=ucb,acqName="UCB", parVec=c(0.5553105,0.5553105, 1, .0001), beta=0.4683883, tau=0.02919533)
+# 
+# ggsave("plots/modelOverview.pdf", right, width = 7.64, height = 4.72, units = in)
+# 

@@ -1,5 +1,5 @@
 #Correlation plot of Gaussian process priors
-#Charley Wu, March 2017
+#Charley Wu, March 2018
 
 #house keeping
 rm(list=ls())
@@ -10,7 +10,7 @@ packages <- c('plyr', 'ggplot2', 'MASS', 'psych')
 lapply(packages, require, character.only = TRUE)
 
 #source models
-source('models.R')
+source('Models.R')
 
 ################################################################################################################
 #Begin Simulation

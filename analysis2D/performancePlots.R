@@ -1,5 +1,6 @@
 #script to produce plots for GP grid experiment
-#Eric Schulz, Charley Wu July 2017
+#2D grid
+#Charley Wu 2-18
 
 #house keeping
 rm(list=ls())
@@ -16,7 +17,7 @@ source('dataMunging.R') #source data import function
 
 d <- dataImport(normalize=FALSE)
  
-#Can also plot model simulated data
+#simulated data from model
 #d<- read.csv('ExperimentData/simDataGPUCB.csv', header=TRUE)
 #d<- read.csv('ExperimentData/simDataBMTLocal.csv', header=TRUE)
 
@@ -136,7 +137,7 @@ p1<-ggplot(subset(dplot5,Measure=="Avg. Reward"), aes(x=trial5, y=mean, colour=i
   facet_wrap(~kernel)+
   theme(legend.position="none", strip.background=element_blank(), legend.key=element_rect(color=NA))
 p1
-ggsave(filename = "plots/avgRewardtalk.pdf", plot = p1, height =3.75, width = 5,  units = "in")
+ggsave(filename = "plots/avgReward.pdf", plot = p1,  height =2.6, width = 5,  units = "in")
 
 
 p2<-ggplot(subset(dplot5,Measure=="Max. Reward"), aes(x=trial5, y=mean, colour=interaction(Horizon,scenario))) +
@@ -153,18 +154,21 @@ p2<-ggplot(subset(dplot5,Measure=="Max. Reward"), aes(x=trial5, y=mean, colour=i
   facet_wrap(~kernel)+
   theme(legend.position="none", strip.background=element_blank(), legend.key=element_rect(color=NA))
 p2
-ggsave(filename = "plots/maxRewardtalk.pdf", plot = p2,  height =3.75, width = 5,  units = "in")
+ggsave(filename = "plots/maxRewardLine.pdf", plot = p2, height =2.6, width = 5,  units = "in")
 
 #ALTERNATIVE BAR PLOT FOR P2
 dplotcFinal$horizon <- factor(dplotcFinal$horizon)
 p2a<-ggplot(dplotcFinal, aes(x=scenario, y=max, fill=interaction(horizon,scenario))) +
-  stat_summary(fun.y = mean, geom = "bar", position = "dodge") + 
-  geom_errorbar(aes(ymin=max-se, ymax=max+se), width=0.2,  position=position_dodge(width = 0.90)) +
+  geom_boxplot(aes(x=scenario, y=max), fill=NA, outlier.shape=NA,  position=position_dodge(width=0.8))+
+  #stat_summary(fun.y = mean, geom = "bar", position = "dodge") + 
+  #geom_errorbar(aes(ymin=max-se, ymax=max+se), width=0.2,  position=position_dodge(width = 0.90)) +
   facet_wrap(~kernel) +
-  #geom_line(aes(linetype=horizon), size=.8) +
+  geom_jitter(color='black', shape=21, alpha=0.4, position=position_jitterdodge(dodge.width=0.8, jitter.width=0.5))+
+  stat_summary(aes(x=scenario, y=max), fill='white', color='black',fun.y=mean, geom="point", shape=23, size=2, stroke = 1,  position=position_dodge(width=0.8)) +
   ylab("Maximum Reward")+
+  xlab("")+
   theme_classic()+
-  coord_cartesian(ylim=c(50,100))+
+  coord_cartesian(ylim=c(50,105))+
   #scale_x_continuous(breaks = c(0, 2, 4, 6,8,10))+
   scale_fill_manual(values = c( "#DA4233", "#7F0000",  "#00BCE2", "#005F8D"))+
   theme(text = element_text(size=16,  family="sans"), legend.position="None")+
@@ -188,11 +192,9 @@ uniqueRepeatDF <- melt(summarydf, id.vars=c("id", "scenario", "kernel", "horizon
 p3 <- ggplot(uniqueRepeatDF, aes(x=factor(horizon), y = value, fill=scenario))+
   stat_summary(fun.y = mean, geom = "bar", position = "dodge") + 
   stat_summary(fun.data = mean_se, geom = "errorbar", position = position_dodge(width = 0.90), width = 0.2 ) +
-
   facet_grid(variable~kernel) +
   theme_classic() +
   scale_fill_manual(values = c("#7F0000","#00BCE2")) +
-
   scale_y_continuous(breaks = seq(0, 40, len = 6))+
   ylab("Clicks") +
   xlab("Search Horizon") +
@@ -202,7 +204,6 @@ p3 <- ggplot(uniqueRepeatDF, aes(x=factor(horizon), y = value, fill=scenario))+
 p3
 ggsave(filename = "plots/uniqueRepeats.pdf", plot = p3, height =3, width = 5.38, units = "in")
 # 
-
 # p4 <- ggplot(summarydf, aes(x=factor(horizon), y = repeats, fill=scenario))+
 #   stat_summary(fun.y = mean, geom = "bar", position = "dodge") + 
 #   stat_summary(fun.data = mean_se, geom = "errorbar", position = position_dodge(width = 0.90), width = 0.2 ) +
@@ -214,7 +215,6 @@ ggsave(filename = "plots/uniqueRepeats.pdf", plot = p3, height =3, width = 5.38,
 #   theme(text = element_text(size=18,  family="serif"))+
 #   theme(legend.position="bottom", strip.background=element_blank(), legend.key=element_rect(color=NA))
 # p4
-
 # ggsave(filename = "plots/repeat.pdf", plot = p4, height =3.66, width = 4.25, units = "in")
 
 g <- ggplot(d, aes(x=z, color=scenario, fill=scenario)) +
@@ -231,8 +231,8 @@ g <- ggplot(d, aes(x=z, color=scenario, fill=scenario)) +
 ggsave(filename = "plots/density.pdf", plot = p5, height =3.66, width = 8.5, units = "in")
 
 #locality of sampling
-sampleSize <- 400000
-randomDF <- data.frame(x=sample(x = seq(0:10), size = sampleSize, replace=TRUE), y=sample(x = seq(0:10), size = sampleSize, replace=TRUE), kernel=c(rep("Rough",sampleSize/2), rep("Smooth", sampleSize/2)), scenario = rep(NA, sampleSize))
+sampleSize <- 800000
+randomDF <- data.frame(x=sample(x = seq(0:10), size = sampleSize, replace=TRUE), y=sample(x = seq(0:10), size = sampleSize, replace=TRUE), kernel=c(rep("Rough",sampleSize/2), rep("Smooth", sampleSize/2)), scenario = rep(c('Accumulators', 'Maximizers'), sampleSize))
 randomDF <- randomDF %>%
   mutate(delta_x = abs(x - lag(x, default = NA)) + abs(y - lag(y, default = NA)) ) 
 
@@ -240,21 +240,21 @@ d$scenario <- factor(d$scenario)
 levels(d$scenario) <-c("Accumulators", "Maximizers")
 
 p4 <- ggplot(na.omit(d), aes(delta_x, fill = scenario, color = scenario)) + 
-  geom_histogram( aes(y = ..density..), position = 'identity', bins=21, alpha=0.2) +
-  stat_density(data = as.data.frame(randomDF), aes(delta_x), geom="line",color='black', adjust=2, size = .8) +
+  geom_histogram( aes(y = ..density..), position = 'identity', bins=21,  alpha = 0.4, color='black') +
+  stat_density(data = as.data.frame(na.omit(randomDF)), aes(delta_x),geom="line",color='black', size = .8, adjust = 4) +
   scale_fill_manual(values = c("#7F0000","#005F8D")) +
   scale_color_manual(values = c("#7F0000","#005F8D")) +
-  facet_grid(~kernel) +
+  facet_grid(scenario~kernel) +
   theme_classic()+
   ylab("Density") +
   xlab("Distance from previous click") +
   scale_x_continuous(breaks = scales::pretty_breaks())+
   #ggtitle("Locality of Sampling") +
   theme(text = element_text(size=16,  family="sans"))+
-  theme(legend.position=c(.83,.8), strip.background=element_blank(), legend.title=element_blank(),legend.key=element_rect(color=NA))
+  theme(legend.position='None', strip.background=element_blank(), legend.title=element_blank(),legend.key=element_rect(color=NA))
 p4
 
-ggsave(filename = "plots/localityofSampling.pdf", plot = p4,height =2.5, width = 5.5, units = "in")
+ggsave(filename = "plots/localityofSampling.pdf", plot = p4,height =3, width = 5.5, units = "in")
 
 aggregatedByIndividuals <- ddply(na.omit(d), .(id, scenario, kernel), summarize, meanDelta_x = mean(delta_x))
 t.test(subset(aggregatedByIndividuals, scenario=="Accumulators")$meanDelta_x, subset(aggregatedByIndividuals, scenario=="Maximizers")$meanDelta_x, var.equal=T)
