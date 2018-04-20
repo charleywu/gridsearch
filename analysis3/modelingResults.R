@@ -107,7 +107,7 @@ importModelResults <- function(dataFolder, kernels, acqFuncs){
 #modelFit <- read.csv('modelResults/modelFit.csv')
 #paramEstimates <- read.csv('modelResults/paramEstimates.csv')
 #############################################################################################################################
-modelResults <- importModelResults('modelResults/first/', c("LocalSearch",  "WSLS", "LWSLS",  "BMT",  "LBMT", "RBF", "LRBF"), c("", "GV", "GM", "UCB", "EXI", "POI", "PMU"))
+modelResults <- importModelResults('modelResults/final/', c("LocalSearch",  "WSLS", "LWSLS",  "BMT",  "LBMT", "RBF", "LRBF"), c("", "GV", "GM", "UCB", "EXI", "POI", "PMU"))
 #modelResults <- importModelResults('modelResults/recoveryLocalGP/', c("LocalSearch",  "WSLS", "LWSLS",  "BMT",  "LBMT", "RBF", "LRBF"), c("", "GV", "GM", "UCB", "EXI", "POI", "PMU"))
 #modelResults <- importModelResults('modelResults/recoveryLocalBMT/', c("LocalSearch",  "WSLS", "LWSLS",  "BMT",  "LBMT", "RBF", "LRBF"), c("", "GV", "GM", "UCB", "EXI", "POI", "PMU"))
 

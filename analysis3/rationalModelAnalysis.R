@@ -1,5 +1,5 @@
-#Charley Wu 2017
-#2D
+#Charley Wu 2018
+#Experiment 3
 #Script to run rational models in comparison to human behavior
 
 #############################################################################################################################
