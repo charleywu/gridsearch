@@ -1,5 +1,5 @@
-#script to compute Inverse-Manhattan-Block distance results for simulated data
-#Charley Wu, June 2018
+#script to compute Inverse-Manhattan-Block distance results for simulated data=
+#Eric Schulz and Charley Wu, June 2017
 
 #house keeping
 rm(list=ls())
@@ -9,8 +9,8 @@ packages <- c('plyr', 'ggplot2', 'jsonlite', 'MASS', 'gridExtra')
 lapply(packages, require, character.only = TRUE)
 
 #read in data
-#dat<-read.csv("ExperimentData/simDataBMTLocal.csv")
-dat<-read.csv("ExperimentData/simDataGPLocal.csv")
+dat<-read.csv("ExperimentData/simDataBMTLocal.csv")
+#dat<-read.csv("ExperimentData/simDataGPLocal.csv")
 
 
 ##############################################################################################################
@@ -38,5 +38,5 @@ computeIMD <- function(destinationFolder, d){
   }
 }
 
-#computeIMD('bmtLocalBlockDistance', dat)
-computeIMD('gpLocalBlockDistance', dat)
+computeIMD('bmtLocalBlockDistance', dat)
+#computeIMD('gpLocalBlockDistance', dat)

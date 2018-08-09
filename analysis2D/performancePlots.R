@@ -1,6 +1,6 @@
 #script to produce plots for GP grid experiment
 #2D grid
-#Charley Wu 2-18
+#Eric Schulz and Charley Wu, July 2018
 
 #house keeping
 rm(list=ls())

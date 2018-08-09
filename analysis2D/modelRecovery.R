@@ -1,5 +1,5 @@
 #Model recovery for simulated data 2D
-#Charley Wu & Eric Schulz November 2016
+#Charley Wu & Eric Schulz November 2018
 
 rm(list=ls()) #house keeping
 
@@ -17,7 +17,7 @@ source('dataMunging.R')
 
 #IMPORTANT: update batch name
 #batchName <- 'recoveryLocal2' #saves output csv files in 'modelResults/batchName/*.csv'
-batchName <- 'recoveryLocalBMT' #saves output csv files in 'modelResults/batchName/*.csv'
+batchName <- 'recoveryLocalBMT2' #saves output csv files in 'modelResults/batchName/*.csv'
 #Simulated data file
 #simFile <- 'simDataGPUCBLocal.csv'
 simFile <- 'simDataBMTLocal.csv'
@@ -33,10 +33,11 @@ clusterid <- as.integer(commandArgs(TRUE)[1]) #Cluster id, corresponds to an int
 
 #create list of all kernel functions
 kernellist<-list(bayesianMeanTracker, rbf) 
+#kernellist<-list(rbf) 
 
 #names of all kernel functions
 kernelnames<-c("LBMT", "LRBF")
-
+#kernelnames<-c("LRBF")
 
 #list of all acquisition functions
 acqlist<-list(ucb)

@@ -1,5 +1,5 @@
 #Analysis of Model Recovery Results
-#Charley Wu, 2018
+#Charley Wu, 2017
 
 #house keeping
 rm(list=ls())
@@ -87,8 +87,8 @@ modelRecovery$generatingModel <- factor(modelRecovery$generatingModel)
 modelRecovery$experiment <- factor(modelRecovery$experiment)
 
 #report means
-
 modelRecovery %>% group_by(experiment, generatingModel, kernel) %>% summarize(avgR2= mean(R2))
+
 
 ########################################################################################################################
 #Predictive Accuracy plot
@@ -136,6 +136,39 @@ p1 <- ggplot(boxplotDF) +
 p1
 
 ggsave(filename = "recovery.pdf", p1,height = 5, width = 7, units ="in")
+
+
+########################################################################################################################
+#Correlation between tau and delta R2
+########################################################################################################################
+
+summary(modelRecovery)
+
+responseNoise <-  ddply(subset(modelRecovery, generatingModel=='Function Learning'), ~kernel+experiment+participant, summarise, R2 =mean(R2), nLL = mean(nLL), tau = tau, lambda = lambda, beta = beta)
+delta_nLL <- 1-  subset(responseNoise, kernel == 'RBF' | kernel == 'LRBF')$nLL/ subset(responseNoise, kernel == 'BMT' | kernel == 'LBMT')$nLL
+plotDF <- subset(responseNoise, kernel == 'RBF' | kernel == 'LRBF')
+plotDF$delta_nLL <- delta_nLL
+
+ggplot(plotDF, aes(x = log(tau), y = delta_nLL))+
+  geom_point()+
+  geom_smooth(method='lm',formula=y~x, se=FALSE, color = 'red', alpha = 0.2, fullrange=TRUE)+
+  geom_hline(yintercept=0, color = 'black', linetype= 'dashed')+
+  ylab('1 - nLL(FL)/nLL(OL)')+
+  theme_classic()+
+  facet_grid(experiment~., scales='free')
+
+cor.test(subset(plotDF, experiment=='Experiment 1')$tau, subset(plotDF, experiment=='Experiment 1')$delta_nLL, method='kendall')
+cor.test(subset(plotDF, experiment=='Experiment 2')$tau, subset(plotDF, experiment=='Experiment 2')$delta_nLL, method='kendall')
+cor.test(subset(plotDF, experiment=='Experiment 3')$tau, subset(plotDF, experiment=='Experiment 3')$delta_nLL, method='kendall')
+
+ggplot(subset(responseNoise, kernel == 'RBF' | kernel == 'LRBF'), aes(x = log(tau), y = R2))+
+  geom_point()+
+  geom_smooth(method='lm',formula=y~x, se=FALSE, color = 'red', alpha = 0.2, fullrange=TRUE)+
+  geom_hline(yintercept=0, color = 'black', linetype= 'dashed')+
+  ylab('R2')+
+  theme_classic()+
+  facet_grid(experiment~., scales='free')
+
 
 ########################################################################################################################
 #Parameter Correlation plot
