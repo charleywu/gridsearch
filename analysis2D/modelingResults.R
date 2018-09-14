@@ -1,4 +1,4 @@
-#Charley Wu, 2018
+#Charley Wu, December 2016
 #Interpret 2D modeling results
 
 #house keeping
@@ -429,15 +429,25 @@ ggsave(filename = "plots/R2pnas.pdf", plot = p2, height =4.33, width = 12, units
 
 ######T-tests########
 #model comparison
-t.test(subset(modelFit, acq=="GM" & kernel=="WSLS")$R2, mu=0)
-t.test(subset(modelFit, acq=="UCB" & kernel=="Local Search")$R2, subset(modelFit, acq=="UCB" & kernel=="GP")$R2, var.equal=TRUE)
-t.test(subset(modelFit, acq=="UCB" & kernel=="Local GP")$R2, subset(modelFit, acq=="UCB" & kernel=="GP")$R2, var.equal=TRUE)
-t.test(subset(modelFit, acq=="UCB" & kernel=="Local GP")$R2, subset(modelFit, acq=="UCB" & kernel=="Local Search")$R2, var.equal=TRUE)
-  
-#Payoff conditions and environment type
-t.test(subset(modelFit, reward=="Cumulative")$R2, subset(modelFit, reward=="Best")$R2, var.equal=TRUE)
-t.test(subset(modelFit, environment=="Smooth")$R2, subset(modelFit, environment=="Rough")$R2, var.equal=TRUE)
+t.test(subset(modelFit, acq == 'UCB' & kernel=='RBF')$R2, subset(modelFit, acq == 'UCB' & kernel=='BMT')$R2, var.equal=T, paired=T)
+psych::cohen.d.ci(cohensD(subset(modelFit, acq == 'UCB' & kernel=='RBF')$R2, subset(modelFit, acq == 'UCB' & kernel=='BMT')$R2, method='paired'), n=80)
 
+t.test(subset(modelFit, acq == 'GM' & kernel=='RBF')$R2, subset(modelFit, acq == 'UCB' & kernel=='RBF')$R2, var.equal=T, paired=T)
+psych::cohen.d.ci(cohensD(subset(modelFit, acq == 'GM' & kernel=='RBF')$R2, subset(modelFit, acq == 'UCB' & kernel=='RBF')$R2, method='paired'), n=80)
+
+t.test(subset(modelFit, acq == 'GV' & kernel=='RBF')$R2, subset(modelFit, acq == 'UCB' & kernel=='RBF')$R2, var.equal=T, paired=T)
+psych::cohen.d.ci(cohensD(subset(modelFit, acq == 'GV' & kernel=='RBF')$R2, subset(modelFit, acq == 'UCB' & kernel=='RBF')$R2, method='paired'), n=80)
+
+t.test(subset(modelFit, acq == 'UCB' & kernel=='LBMT')$R2, subset(modelFit, acq == 'UCB' & kernel=='BMT')$R2, var.equal=T, paired=T)
+psych::cohen.d.ci(cohensD(subset(modelFit, acq == 'UCB' & kernel=='LBMT')$R2, subset(modelFit, acq == 'UCB' & kernel=='BMT')$R2, method='paired'), n=80)
+
+
+t.test(subset(modelFit, acq == 'UCB' & kernel=='LRBF')$R2, subset(modelFit, acq == 'UCB' & kernel=='RBF')$R2, var.equal=T, paired=T)
+psych::cohen.d.ci(cohensD(subset(modelFit, acq == 'UCB' & kernel=='LRBF')$R2, subset(modelFit, acq == 'UCB' & kernel=='RBF')$R2, method='paired'), n=80)
+
+
+t.test(subset(modelFit, acq == 'UCB' & kernel=='LRBF')$R2, subset(modelFit, acq == 'UCB' & kernel=='LBMT')$R2, var.equal=T, paired=T)
+psych::cohen.d.ci(cohensD(subset(modelFit, acq == 'UCB' & kernel=='LRBF')$R2, subset(modelFit, acq == 'UCB' & kernel=='LBMT')$R2, method='paired'), n=80)
 
 #############################################################################################################################
 # Parameter Estimates

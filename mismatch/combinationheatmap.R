@@ -1,8 +1,8 @@
 #Mismatch lambda simulations
 #Charley Wu and Eric Schulz, 2018
-
+rm(list=ls())
 library(scales)
-library(plyr)
+library(dplyr)
 library(ggplot2)
 se <- function(x) sqrt(var(x)/length(x))
 rootDir <- rprojroot::find_rstudio_root_file()
@@ -30,8 +30,6 @@ dl1<-ddply(dp1, ~lteach+trial, summarize, y=median(Score[lteach>llearn])-median(
 dl1$llearn<-dl1$lteach-dl1$y
 dl1$llearn<-ifelse(dl1$llearn<0.1,0.1,dl1$llearn)
 dl1$llearn<-ifelse(dl1$llearn>0.9,0.9,dl1$llearn)
-
-nrow(dp2)
 
 nrow(dp1)*11
 
@@ -66,11 +64,11 @@ L<-expand.grid(seq(0.1,3,0.1), seq(0.1,3,0.1))
 d<-read.csv("mismatch1d.csv")
 d$lteach<-rep(L[,1], each=11)
 d$llearn<-rep(L[,2], each=11)
-d <- d%>% group_by(lteach, llearn) %>% mutate(avgCumReward = cumsum(m)/seq_along(m))
+d <- d%>% dplyr::group_by(lteach, llearn) %>% mutate(avgCumReward = cumsum(m)/seq_along(m))
 subset(d, lteach==1 & llearn==1)
 dp2<-subset(d, trial %in% c(1,3,5,10))
 #dp2$m<- rescale(dp2$m, from=c(-1.8, 1.8), to=c(0,100))
-dp2$avgCumReward<- rescale(dp2$avgCumReward, from=c(-1.8, 1.8), to=c(0,100))
+dp2$avgCumReward <- rescale(dp2$avgCumReward, from=c(-1.8, 1.8), to=c(0,100))
 dp2$trial<-mapvalues(dp2$trial, c(1,3,5,10), c("t=1","t=3","t=5","t=10"))
 dp2$trial<-factor(dp2$trial,levels= c("t=1","t=3","t=5","t=10"))
 dp2$Score<-dp2$avgCumReward
@@ -84,7 +82,7 @@ setwd('analysis1D')
 gpParams <- read.csv('rationalModels/parameters/gp.csv')
 setwd('..')
 gpParams$lteach <- ifelse(gpParams$environment=='Rough', 1, 2)
-ldf <- gpParams %>% group_by(environment) %>%
+ldf <- gpParams %>% dplyr::group_by(environment) %>%
   dplyr::summarise(medLambda = median(lambda),  meanLambda = mean(lambda[!lambda %in% boxplot.stats(lambda)$out]), lower=quantile(lambda, .25), upper=quantile(lambda, .75)) 
   
 ldf<- ldf %>%  mutate(lteach = ifelse(environment=='Smooth', 2, 1))
@@ -98,7 +96,7 @@ p2<-ggplot(dp2, aes(x = lteach, y =llearn)) +
   #geom_point(data=dl2, aes(shape=factor(lteach)), col="black", fill=NA, size=2) +
   #scale_fill_gradient(trans = 'log')+
   #scale_fill_distiller(palette = "Spectral", direction = -1, limits = c(40,105), breaks=seq(40,100,20), labels=seq(40,100,20))+
-  scale_fill_distiller(palette = "Spectral", direction = -1)+
+  scale_fill_distiller(palette = "Spectral", direction = -1, limits=c(40, 95))+
   facet_grid(~trial)+
   scale_x_continuous(expression("Teacher"~lambda[0]), expand = c(0, 0), breaks=seq(0.5,2.5,1))+ 
   scale_y_continuous(expression("Student"~lambda[1]), expand = c(0, 0),  breaks=seq(0.5,2.5,1))+
@@ -124,7 +122,7 @@ setwd('mismatch')
 d<-read.csv("mismatch2d.csv")
 d$lteach<-rep(L[,1], each=40)
 d$llearn<-rep(L[,2], each=40)
-d <- d%>% group_by(lteach, llearn) %>% mutate(avgCumReward = cumsum(m)/seq_along(m))
+d <- d%>% dplyr::group_by(lteach, llearn) %>% mutate(avgCumReward = cumsum(m)/seq_along(m))
 dp3<-subset(d, trial %in% c(5,10,20,40))
 #dp3$m<-rescale(dp3$m, from=c(-1.8, 1.8), to=c(0,100))
 dp3$avgCumReward<-rescale(dp3$avgCumReward, from=c(-1.8, 1.8), to=c(0,100))
@@ -157,7 +155,7 @@ p3<-ggplot(dp3, aes(x = lteach, y =llearn)) +
   geom_point(data=ldf , aes(group=environment,x=lteach, y=meanLambda, shape=environment), fill='black')+
   #scale_fill_gradient(trans = 'log')+
   #scale_fill_distiller(palette = "Spectral", direction = -1,  limits = c(40,105), breaks=seq(40,100,20), labels=seq(40,100,20)) +  
-  scale_fill_distiller(palette = "Spectral", direction = -1) +  
+  scale_fill_distiller(palette = "Spectral", direction = -1, limits = c(40,95)) +  
   facet_grid(~trial)+
   scale_x_continuous(expression("Teacher"~lambda[0]), expand = c(0, 0), breaks=seq(0.5,2.5,1))+ 
   scale_y_continuous(expression("Student"~lambda[1]), expand = c(0, 0), breaks=seq(0.5,2.5,1))+

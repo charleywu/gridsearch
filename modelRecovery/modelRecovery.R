@@ -6,7 +6,7 @@ rm(list=ls())
 theme_set(theme_classic(base_size=16))
 
 #load packages
-packages <- c('plyr', 'jsonlite', 'ggplot2', 'gridExtra', 'reshape2', 'stargazer', 'coefplot', "grid", 'parallel', 'corrplot', 'rprojroot', 'MASS')
+packages <- c('tidyr', 'dplyr', 'jsonlite', 'ggplot2', 'gridExtra', 'reshape2', 'stargazer', 'coefplot', "grid", 'parallel', 'corrplot', 'rprojroot', 'MASS')
 lapply(packages, require, character.only = TRUE)
 
 rootDir <- rprojroot::find_rstudio_root_file()
@@ -353,3 +353,46 @@ p4c
 
 p4 <- plot_grid(p4a,p4b, p4c, ncol=3, labels=NA)
 ggsave(filename='paramRecovery3.pdf', p4, height = 4, width = 12, units='in')
+
+##############################################################################################################
+#outliers
+#What percentage of outliers were excluded from the graph?
+###################################################################################################################
+#Experiment 1
+outliers <- 0
+maxvalue <- axisScale(cor1D$lambda1, cor1D$lambda2)
+outliers <- outliers +  sum(cor1D$lambda1 > maxvalue | cor1D$lambda2 > maxvalue)
+
+maxvalue <- axisScale(cor1D$beta1, cor1D$beta2)
+outliers <- outliers + sum(cor1D$beta1 > maxvalue | cor1D$beta2 > maxvalue) 
+
+maxvalue <- axisScale(cor1D$tau1, cor1D$tau2)
+outliers <- outliers + sum(cor1D$tau1 > maxvalue | cor1D$tau2 > maxvalue)
+
+outliers / (81 * 2 * 3)
+
+#Experiment 2
+outliers <- 0
+maxvalue <- axisScale(cor2D$lambda1, cor2D$lambda2)
+outliers <- outliers +  sum(cor2D$lambda1 > maxvalue | cor2D$lambda2 > maxvalue)
+
+maxvalue <- axisScale(cor2D$beta1, cor2D$beta2)
+outliers <- outliers + sum(cor2D$beta1 > maxvalue | cor2D$beta2 > maxvalue) 
+
+maxvalue <- axisScale(cor2D$tau1, cor2D$tau2)
+outliers <- outliers + sum(cor2D$tau1 > maxvalue | cor2D$tau2 > maxvalue)
+
+outliers / (80 * 2 * 3)
+
+#Experiment 3
+outliers <- 0
+maxvalue <- axisScale(cor3$lambda1, cor3$lambda2)
+outliers <- outliers +  sum(cor3$lambda1 > maxvalue | cor3$lambda2 > maxvalue)
+
+maxvalue <- axisScale(cor3$beta1, cor3$beta2)
+outliers <- outliers + sum(cor3$beta1 > maxvalue | cor3$beta2 > maxvalue) 
+
+maxvalue <- axisScale(cor3$tau1, cor3$tau2)
+outliers <- outliers + sum(cor3$tau1 > maxvalue | cor3$tau2 > maxvalue)
+
+outliers / (80 * 2 * 3)

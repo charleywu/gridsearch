@@ -107,7 +107,7 @@ importModelResults <- function(dataFolder, kernels, acqFuncs){
 #modelFit <- read.csv('modelResults/modelFit.csv')
 #paramEstimates <- read.csv('modelResults/paramEstimates.csv')
 #############################################################################################################################
-modelResults <- importModelResults('modelResults/final/', c("LocalSearch",  "WSLS", "LWSLS",  "BMT",  "LBMT", "RBF", "LRBF"), c("", "GV", "GM", "UCB", "EXI", "POI", "PMU"))
+modelResults <- importModelResults('modelResults/first/', c("LocalSearch",  "WSLS", "LWSLS",  "BMT",  "LBMT", "RBF", "LRBF"), c("", "GV", "GM", "UCB", "EXI", "POI", "PMU"))
 #modelResults <- importModelResults('modelResults/recoveryLocalGP/', c("LocalSearch",  "WSLS", "LWSLS",  "BMT",  "LBMT", "RBF", "LRBF"), c("", "GV", "GM", "UCB", "EXI", "POI", "PMU"))
 #modelResults <- importModelResults('modelResults/recoveryLocalBMT/', c("LocalSearch",  "WSLS", "LWSLS",  "BMT",  "LBMT", "RBF", "LRBF"), c("", "GV", "GM", "UCB", "EXI", "POI", "PMU"))
 
@@ -315,6 +315,28 @@ ggplot(modelFit, aes(y=nLL, x=acq, color=acq, shape=environment)) +
 
 ######tests########
 #model comparison
+
+t.test(subset(modelFit, acq == 'UCB' & kernel=='RBF')$R2, subset(modelFit, acq == 'UCB' & kernel=='BMT')$R2, var.equal=T, paired=T)
+psych::cohen.d.ci(cohensD(subset(modelFit, acq == 'UCB' & kernel=='RBF')$R2, subset(modelFit, acq == 'UCB' & kernel=='BMT')$R2, method='paired'), n=80)
+
+t.test(subset(modelFit, acq == 'GM' & kernel=='LRBF')$R2, subset(modelFit, acq == 'UCB' & kernel=='LRBF')$R2, var.equal=T, paired=T)
+psych::cohen.d.ci(cohensD(subset(modelFit, acq == 'GM' & kernel=='LRBF')$R2, subset(modelFit, acq == 'UCB' & kernel=='LRBF')$R2, method='paired'), n=80)
+
+t.test(subset(modelFit, acq == 'GV' & kernel=='RBF')$R2, subset(modelFit, acq == 'UCB' & kernel=='RBF')$R2, var.equal=T, paired=T)
+psych::cohen.d.ci(cohensD(subset(modelFit, acq == 'GV' & kernel=='RBF')$R2, subset(modelFit, acq == 'UCB' & kernel=='RBF')$R2, method='paired'), n=80)
+
+t.test(subset(modelFit, acq == 'UCB' & kernel=='LBMT')$R2, subset(modelFit, acq == 'UCB' & kernel=='BMT')$R2, var.equal=T, paired=T)
+psych::cohen.d.ci(cohensD(subset(modelFit, acq == 'UCB' & kernel=='LBMT')$R2, subset(modelFit, acq == 'UCB' & kernel=='BMT')$R2, method='paired'), n=80)
+
+
+t.test(subset(modelFit, acq == 'UCB' & kernel=='LRBF')$R2, subset(modelFit, acq == 'UCB' & kernel=='RBF')$R2, var.equal=T, paired=T)
+psych::cohen.d.ci(cohensD(subset(modelFit, acq == 'UCB' & kernel=='LRBF')$R2, subset(modelFit, acq == 'UCB' & kernel=='RBF')$R2, method='paired'), n=80)
+
+
+t.test(subset(modelFit, acq == 'UCB' & kernel=='LRBF')$R2, subset(modelFit, acq == 'UCB' & kernel=='LBMT')$R2, var.equal=T, paired=T)
+psych::cohen.d.ci(cohensD(subset(modelFit, acq == 'UCB' & kernel=='LRBF')$R2, subset(modelFit, acq == 'UCB' & kernel=='LBMT')$R2, method='paired'), n=80)
+
+
 t.test(subset(modelFit, ModelName=="BMT-UCB")$R2, subset(modelFit, ModelName=="RBF-UCB")$R2, paired=TRUE)
 cohensD(subset(modelFit, ModelName=="BMT-UCB")$R2, subset(modelFit, ModelName=="RBF-UCB")$R2)
 
