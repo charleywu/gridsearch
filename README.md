@@ -1,7 +1,7 @@
 # Gridsearch
 Complete code and data for replicating the results from:
 
-Wu, C.M., Schulz, E., Speekenbrink, M., Nelson, J.D., Meder, B. (in press). Generalization guides human exploration in vast decision spaces. BioRxiv preprint: https://doi.org/10.1101/171371
+Wu, C. M., Schulz, E., Speekenbrink, M., Nelson, J. D., & Meder, B. (2018). Generalization guides human exploration in vast decision spaces. Nature Human Behaviour. https://doi.org/10.1038/s41562-018-0467-4
 
 An earlier version of this project (Experiment 2D and early modeling results) was released as:
 
