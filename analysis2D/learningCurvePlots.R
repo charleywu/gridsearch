@@ -5,7 +5,7 @@
 rm(list=ls())
 
 #load packages
-packages <- c('plyr', 'jsonlite', 'ggplot2', 'reshape2', "grid", 'matrixcalc')
+packages <- c('plyr', 'jsonlite', 'ggplot2', 'reshape2', "grid", 'matrixcalc', 'data.table')
 lapply(packages, require, character.only = TRUE)
 
 
@@ -23,7 +23,7 @@ setwd('..')
 setwd('..')
 
 df <- ddply(df, ~id+trial+scenario+horizon+Model+kernel, summarise, meanReward=mean(z), meanSE= sd(z)/sqrt(length(z)),  maxReward=mean(zmax), maxSE= sd(zmax)/sqrt(length(zmax)))
-colnames(df) <- c("trial", "PayoffCondition", "Horizon", "Model", "Environment", "meanReward", "meanSE", "maxReward", "maxSE")
+colnames(df) <- c("id", "trial", "PayoffCondition", "Horizon", "Model", "Environment", "meanReward", "meanSE", "maxReward", "maxSE")
 df$PayoffCondition <- factor(df$PayoffCondition)
 levels(df$PayoffCondition) <- c("Cumulative", "Best")
 df$Horizon <- factor(df$Horizon)
