@@ -13,45 +13,18 @@ lapply(packages, require, character.only = TRUE)
 source("Models.R") #model specifications
 source('dataMunging.R')
 
-#clusterid <- as.integer(runif(1, 1, 400))
-clusterid <- as.integer(commandArgs(TRUE)[1]) #Cluster id, corresponds to an integer used to indicate which combination of kernel and acquisition function to simulate
-set.seed(clusterid)
-
-models <- c("BMT", "localBMT", "GP", "localGP")
-rep <- seq(1,100)
-opts <- expand.grid(models, rep)
-colnames(opts) <- c("model", "rep")
-
-condition <- opts[clusterid,]
+#whether or not to use localized variant of model
+localize <- TRUE
+k <- bayesianMeanTracker
 acq <- ucb
+outputFileName <- 'simDataBMTLocal'
 
-
-if (condition$model=='BMT'){
-  outputFileName <- paste0('simDataBMT', condition$rep)
-  pars <- read.csv('rationalModels/parameters/BMT.csv')
-  localize <- FALSE
-  k <- bayesianMeanTracker
-}else if (condition$model=="localBMT"){
-  outputFileName <- paste0('simDataBMTLocal', condition$rep)
-  pars <- read.csv('rationalModels/parameters/localBMT.csv')
-  localize <- TRUE
-  k <- bayesianMeanTracker
-}else if (condition$model=='GP'){
-  outputFileName <-  paste0('simDataGP', condition$rep)
-  pars <- read.csv('rationalModels/parameters/gp.csv')
-  localize <- FALSE
-  k <- rbf
-}else if (condition$model=="localGP"){
-  outputFileName <- paste0('simDataGPLocal', condition$rep)
-  pars <- read.csv('rationalModels/parameters/localgp.csv')
-  localize <- TRUE
-  k <- rbf
-}
-
+#read parameter estimates (either GP-UCB or local GP-UCB)
+pars <- read.csv('rationalModels/parameters/localBMT.csv')
 pars$horizon <- factor(pars$horizon, levels=c(20, 40), labels=c("Short", "Long"))
 
 #Participant data
-d <- dataImport(normalize=FALSE) #participant data
+d <- dataImport() #participant data
 simD <- d #used for simulated data
 #add columns for the parameters used to generate the data
 simD$tau <- NA
@@ -104,7 +77,7 @@ for (i in 1:80){ #loop thorugh participants
     chosen <- c(location)
     #rewards
     reward<-c()
-    reward[1] <- Y <- Ymax <- envClass[[envNum+1]][location,"y"]*100 #add 1 to envNum to go from range 0-19 to 1-20
+    reward[1] <- Y <- envClass[[envNum+1]][location,"y"]*100 #add 1 to envNum to go from range 0-19 to 1-20
     prevPost <- NULL  #set the previous posterior computation to NULL for the kalman filter
     #beginloop through remaining trials and make decisions based on GP preditions
     for (j in 2:(horizonValue+1)){
@@ -140,18 +113,16 @@ for (i in 1:80){ #loop thorugh participants
       #Sample next choice
       location <- sample(1:121,1, prob=p, replace=TRUE)
       #update reward, X1, X2, and Y
-      reward[j] <- smoothEnvironments[[envNum+1]][location,"y"] * 100
+      reward[j] <- envClass[[envNum+1]][location,"y"] * 100
       X1 <- c(X1, choices[location, 'x1'])
       X2 <- c(X2, choices[location, 'x2'])
       chosen <- c(chosen, location)
       Y <- c(Y,  reward[j])
-      Ymax <- c(Ymax, max(Y))
     }
     #insert data intosimD
     simD[simD$id==i & simD$env==envNum,]$x <- X1
     simD[simD$id==i & simD$env==envNum,]$y <- X2
     simD[simD$id==i & simD$env==envNum,]$z <- Y
-    simD[simD$id==i & simD$env==envNum,]$zmax <- Ymax
     simD[simD$id==i & simD$env==envNum,]$chosen <- chosen
     simD[simD$id==i & simD$env==envNum,]$tau <- tau
     if(inherits(k, "GP")){
@@ -162,6 +133,5 @@ for (i in 1:80){ #loop thorugh participants
     simD[simD$id==i & simD$env==envNum,]$beta <- beta
   }
 }
-simD$Model <- condition$model
 
-write.csv(simD, paste0('rationalModels/simulatedData/',outputFileName,'.csv'))
+write.csv(simD, paste0('ExperimentData/',outputFileName,'.csv'))

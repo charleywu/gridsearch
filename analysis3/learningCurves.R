@@ -1,262 +1,163 @@
+#Generate Simulated Model Data using Participant parameter estimates 
 #Charley Wu 2018
-#Script to run rational models in comparison to human behavior split by condition
 
+#############################################################################################################################
+# IMPORT DATA AND ENVIRONMENTS
+#############################################################################################################################
 #house keeping
 rm(list=ls())
 
 #load packages
-packages <- c('plyr', 'jsonlite', 'ggplot2', 'reshape2', "grid", 'matrixcalc')
+packages <- c('plyr', 'jsonlite', 'ggplot2', 'gridExtra', 'reshape2', "grid", 'matrixcalc')
 lapply(packages, require, character.only = TRUE)
+source("Models.R") #model specifications
+source('dataMunging.R')
 
-reps <- 10000 #replications
-
-#Cluster id from qsub
-#DEBUG clusterid <- as.integer(runif(1, 1, 16))
+#clusterid <- as.integer(runif(1, 1, 400))
 clusterid <- as.integer(commandArgs(TRUE)[1]) #Cluster id, corresponds to an integer used to indicate which combination of kernel and acquisition function to simulate
 set.seed(clusterid)
 
-payoffConditions <- c("Cumulative", "Best")
-environments <- c("Natural")
-horizon <- c(20,40)
-models <- c( "gp", "localgp", "bmt", "localbmt")
-opts <- expand.grid(payoffConditions, environments, horizon, models)
-colnames(opts) <- c("payoff", "env", "horizon", "model")
+models <- c("BMT", "localBMT", "GP", "localGP")
+rep <- seq(1,100)
+opts <- expand.grid(models, rep)
+colnames(opts) <- c("model", "rep")
 
 condition <- opts[clusterid,]
-#############################################################################################################################
-# IMPORT ENVIRONMENTS
-#############################################################################################################################
-
-#GP model specifications
-source("Models.R")
+acq <- ucb
 
 
-maxton<-function(x){
-  maxn<-rep(0,length(x))
-  maxn[1]<-x[1]
-  for (i in 2:length(x)){
-    if (x[i]>maxn[i-1]){maxn[i]<-x[i]}
-    else{maxn[i]<-maxn[i-1]}
-  }
-  return(maxn)
+if (condition$model=='BMT'){
+  outputFileName <- paste0('simDataBMT', condition$rep)
+  pars <- read.csv('rationalModels/parameters/BMT.csv')
+  localize <- FALSE
+  k <- bayesianMeanTracker
+}else if (condition$model=="localBMT"){
+  outputFileName <- paste0('simDataBMTLocal', condition$rep)
+  pars <- read.csv('rationalModels/parameters/localBMT.csv')
+  localize <- TRUE
+  k <- bayesianMeanTracker
+}else if (condition$model=='GP'){
+  outputFileName <-  paste0('simDataGP', condition$rep)
+  pars <- read.csv('rationalModels/parameters/gp.csv')
+  localize <- FALSE
+  k <- rbf
+}else if (condition$model=="localGP"){
+  outputFileName <- paste0('simDataGPLocal', condition$rep)
+  pars <- read.csv('rationalModels/parameters/localgp.csv')
+  localize <- TRUE
+  k <- rbf
 }
+
+pars$horizon <- factor(pars$horizon, levels=c(20, 40), labels=c("Short", "Long"))
+
+#Participant data
+d <- dataImport(normalize=FALSE) #participant data
+simD <- d #used for simulated data
+#add columns for the parameters used to generate the data
+simD$tau <- NA
+simD$lambda <- NA
+simD$kError <- NA
+simD$beta <- NA
 
 #Environments
 setwd("..") #Set into parent folder to read kernel files
 setwd("experiment3")
 #load environments from json, unlist, transform into numeric, convert into matrix, and name dimensions
-environments <-fromJSON("environments/agridat.json", flatten=TRUE)
+environments <- fromJSON("environments/agridat.json", flatten=TRUE)
 setwd("..")#Step back into analysis folder
 setwd("analysis3")
 
-#parameter estimates
-gpPars <- read.csv('rationalModels/parameters/gp.csv')
-localgpPars <- read.csv('rationalModels/parameters/localgp.csv')
-bmtPars <-  read.csv('rationalModels/parameters/BMT.csv')
-localbmtPars <-  read.csv('rationalModels/parameters/localBMT.csv')
+
+#build manhattan blocks and choice matrix
+choices <- manhattan <- expand.grid('x1'=0:10, 'x2'=0:10) 
+
 #############################################################################################################################
-# Learning Curve Simulations
+# Run simulation
 #############################################################################################################################
 
-learningCurveSimulation <- function(replications, outputfile, condition){
-  horizon <- condition$horizon
-  model <- condition$model
-  #build manhattan blocks
-  manhattan <- expand.grid(0:10, 0:10) 
-  names(manhattan)<-c("x1","x2")
-  #GP-UCB
-  if (model=='gp'){
-    #load parameters and subset by condition
-    params = subset(gpPars, reward==condition$payoff  & horizon == condition$horizon)
-    #choice matrix
-    choices <- expand.grid(0:10, 0:10) #build choice matrix
-    names(choices)<-c("x1","x2")
-    learningCurve <- sapply(1:replications, FUN=function(x){
-      paramSample <- params[sample(1:ncol(params), 1),]
-      lambda <- paramSample$lambda
-      beta <- paramSample$beta
-      tau <- paramSample$tau
-      reward <-c() #store rewards
-      envNum <- sample(1:20,1) #randomly choose environment
-      #1st trial is random
-      location <- sample(1:121,1)
-      #Observations
-      X1 <- choices[location,'x1']
-      X2 <- choices[location,'x2']
-      reward[1] <- Y <- environments[[envNum]][location,"y"]*100 #pull out rewards
-      for (j in 2:(condition$horizon+1)){ #after that, loop through remaining trials based on inertia-based transition probabilities
-        #compute posterior predictions
-        post <- gpr(X.test = choices, theta = c(lambda, lambda, 1, 0.0001), X =  cbind(X1,X2), Y = ((Y-50)/100), k = rbf) #scale observed Y to zero mean, variance of 1
-        #compute acquisition function evaluation
-        utilityVec <- ucb(post, pars = c(beta))
-        #prevent overflow by subtracting max
-        utilityVec <- utilityVec - max(utilityVec)
-        #compute softmax choice probabilities
-        p <- exp(utilityVec/tau)
-        p <- p/sum(p)
-        #Sample next choice
-        location <- sample(1:121,1, prob=p, replace=TRUE)
-        #update reward, X1, X2, and Y for both smooth and rough
-        reward[j] <- environments[[envNum]][location,"y"] * 100
-        X1 <- c(X1, choices[location, 'x1'])
-        X2 <- c(X2, choices[location, 'x2'])
-        Y <- c(Y,  reward[j])}
-      reward})
-  }
-  #Local GP-UCB
-  else if (model=='localgp'){
-    #load parameters and subset by condition
-    params = subset(localgpPars, reward==condition$payoff & horizon == condition$horizon)
-    #choice matrix
-    choices <- expand.grid(0:10, 0:10) #build choice matrix
-    names(choices)<-c("x1","x2")
-    learningCurve <- sapply(1:replications, FUN=function(x){
-      paramSample <- params[sample(1:ncol(params), 1),]
-      lambda <- paramSample$lambda
-      beta <- paramSample$beta
-      tau <- paramSample$tau
-      reward <-c() #store rewards
-      envNum <- sample(1:20,1) #randomly choose environment
-      #1st trial is random
-      location <- sample(1:121,1)
-      #Observations
-      X1 <- choices[location,'x1']
-      X2 <- choices[location,'x2']
-      reward[1] <- Y <- environments[[envNum]][location,"y"]*100 #pull out rewards
-      for (j in 2:(condition$horizon+1)){ #after that, loop through remaining trials based on inertia-based transition probabilities
+for (i in 1:80){ #loop thorugh participants
+  subjd <- subset(d, id == i) #subset participant
+  subjParams <- subset(pars, participant==i) #subset parameters
+  envs <- unique(subjd$env) #which specific environments did the subject encounter?
+  #counters to relate to leaveoutindex in paramEstimates
+  longRound <- 1
+  shortRound <- 1
+  for (round in 1:8){ #loop through rounds
+    envNum <- envs[round] #env number
+    horizonLength <- subjd[subjd$env==envNum, ]$Horizon[1] #what was the horizon length
+    horizonValue <- subjd[subjd$env==envNum, ]$horizon[1]
+    ifelse(horizonLength == "Long", leaveoutindex <- longRound, leaveoutindex <- shortRound)
+    ifelse(horizonLength == "Long", longRound <- longRound + 1, shortRound <- shortRound + 1) #increment leaveout index counters
+    params <- subset(subjParams, horizon==horizonLength)[leaveoutindex,]
+    if(inherits(k, "GP")){lambda <- params$lambda
+    }else if(inherits(k, "KalmanFilter")){kError <- params$kError}
+    beta <- params$beta
+    tau <- params$tau
+    location <- sample(1:121,1) #first location is random
+    #Observations
+    X1 <- choices[location,'x1']
+    X2<- choices[location,'x2']
+    chosen <- c(location)
+    #rewards
+    reward<-c()
+    reward[1] <- Y <- Ymax <- environments[[envNum+1]][location,"y"]*100 #add 1 to envNum to go from range 0-19 to 1-20
+    prevPost <- NULL  #set the previous posterior computation to NULL for the kalman filter
+    #beginloop through remaining trials and make decisions based on GP preditions
+    for (j in 2:(horizonValue+1)){
+      if (localize){
         #compute Manhattan Distances
         prev <- unlist(manhattan[location,])
         distance <- sapply(seq(1:121), FUN=function(x) abs(manhattan[x, "x1"] - prev["x1"]) + abs(manhattan[x, "x2"] - prev["x2"]))
         #set values of 0 to 1
         distance[distance==0]<-1
-        #compute posterior predictions
-        post <- gpr(X.test = choices, theta = c(lambda, lambda, 1, 0.0001), X =  cbind(X1,X2), Y = ((Y-50)/100), k = rbf) #scale observed Y to zero mean, variance of 1
-        #compute acquisition function evaluation
-        utilityVec <- ucb(post, pars = c(beta))/distance
-        #prevent overflow by subtracting max
-        utilityVec <- utilityVec - max(utilityVec)
-        #compute softmax choice probabilities
-        p <- exp(utilityVec/tau)
-        p <- p/sum(p)
-        #Sample next choice
-        location <- sample(1:121,1, prob=p, replace=TRUE)
-        #update reward, X1, X2, and Y for both smooth and rough
-        reward[j] <- environments[[envNum]][location,"y"] * 100
-        X1 <- c(X1, choices[location, 'x1'])
-        X2 <- c(X2, choices[location, 'x2'])
-        Y <- c(Y,  reward[j])}
-      reward})
-  }
-  #BMT
-  else if (model=='bmt'){
-    #load parameters and subset by condition
-    params = subset(bmtPars, reward==condition$payoff & horizon == condition$horizon)
-    #choice matrix
-    choices <- expand.grid(0:10, 0:10) #build choice matrix
-    names(choices)<-c("x1","x2")
-    learningCurve <- sapply(1:replications, FUN=function(x){
-      paramSample <- params[sample(1:ncol(params), 1),]
-      kError <- paramSample$kError
-      beta <- paramSample$beta
-      tau <- paramSample$tau
-      reward <-c() #store rewards
-      envNum <- sample(1:20,1) #randomly choose environment
-      #1st trial is random
-      location <- sample(1:121,1)
-      #Observations
-      X1 <- choices[location,'x1']
-      X2 <- choices[location,'x2']
-      reward[1] <- Y <- environments[[envNum]][location,"y"]*100 #pull out rewards
-      #posterior
-      prevPost <- NULL  #initialize previous posterior for sequential updating of BMT posterior
-      for (j in 2:(condition$horizon+1)){ #after that, loop through remaining trials based on inertia-based transition probabilities
-        #update posterior predictions
-        post <- bayesianMeanTracker(x = cbind(X1[j-1],X2[j-1] ), y = (reward[j-1] - 50) / 100, prevPost = prevPost, theta = c(kError))  #IMPORTANT, rescale sampled location between 0:29 because bayesianMeanTracker automatically compensates for the input range by adding +1
-        prevPost <- post  #save new posterior as prevPost for next round
-        #compute acquisition function evaluation
+        if (inherits(k, 'GP')){#compute GP posterior predictions
+          post <- gpr(X.test = choices, theta = c(lambda, lambda, 1, 0.0001), X = cbind(X1,X2), Y = ((Y-50)/100), k = rbf) #scale Y observations to zero mean and variance of 1
+        }else if (inherits(k, 'KalmanFilter')){
+          post <- bayesianMeanTracker(x = as.matrix(cbind(X1[j-1],X2[j-1])), y = (reward[j-1]-50)/100, prevPost = prevPost, theta = c(kError))
+          #update prevPost for the next round
+          prevPost <- post}
+        #compute acquisition function evaluation and weight by inverse manhattan distance
+        utilityVec <- ucb(post, pars = c(beta)) / distance
+      }else{
+        if (inherits(k, 'GP')){#compute GP posterior predictions
+          post <- gpr(X.test = choices, theta = c(lambda, lambda, 1, 0.0001), X = cbind(X1,X2), Y = ((Y-50)/100), k = rbf) #scale Y observations to zero mean and variance of 1
+        }else if (inherits(k, 'KalmanFilter')){
+          post <- bayesianMeanTracker(x = as.matrix(cbind(X1[j-1],X2[j-1])), y = (reward[j-1]-50)/100, prevPost = prevPost, theta = c(kError))
+          #update prevPost for the next round
+          prevPost <- post}
+        #compute acquisition function evaluation and weight by inverse manhattan distance
         utilityVec <- ucb(post, pars = c(beta))
-        #prevent overflow by subtracting max
-        utilityVec <- utilityVec - max(utilityVec)
-        #compute softmax choice probabilities
-        p <- exp(utilityVec/tau)
-        p <- p/sum(p)
-        #Sample next choice
-        location <- sample(1:121,1, prob=p, replace=TRUE)
-        #update reward, X1, X2, and Y for both smooth and rough
-        reward[j] <- environments[[envNum]][location,"y"] * 100
-        X1 <- c(X1, choices[location, 'x1'])
-        X2 <- c(X2, choices[location, 'x2'])
-        Y <- c(Y,  reward[j])}
-      reward})
+      }
+      #scale to max of prevent overflow by subtracting max
+      utilityVec <- utilityVec - max(utilityVec)
+      #compute softmax choice probabilities
+      p <- exp(utilityVec/tau)
+      p <- p/sum(p)
+      #Sample next choice
+      location <- sample(1:121,1, prob=p, replace=TRUE)
+      #update reward, X1, X2, and Y
+      reward[j] <- environments[[envNum+1]][location,"y"] * 100
+      X1 <- c(X1, choices[location, 'x1'])
+      X2 <- c(X2, choices[location, 'x2'])
+      chosen <- c(chosen, location)
+      Y <- c(Y,  reward[j])
+      Ymax <- c(Ymax, max(Y))
+    }
+    #insert data intosimD
+    simD[simD$id==i & simD$env==envNum,]$x <- X1
+    simD[simD$id==i & simD$env==envNum,]$y <- X2
+    simD[simD$id==i & simD$env==envNum,]$z <- Y
+    simD[simD$id==i & simD$env==envNum,]$zmax <- Ymax
+    simD[simD$id==i & simD$env==envNum,]$chosen <- chosen
+    simD[simD$id==i & simD$env==envNum,]$tau <- tau
+    if(inherits(k, "GP")){
+      simD[simD$id==i & simD$env==envNum,]$lambda <- lambda
+    }else if(inherits(k, "KalmanFilter")){
+      simD[simD$id==i & simD$env==envNum,]$kError <- kError
+    }
+    simD[simD$id==i & simD$env==envNum,]$beta <- beta
   }
-  #Local BMT
-  else if (model=='localbmt'){
-    #load parameters and subset by condition
-    params = subset(localbmtPars, reward==condition$payoff & horizon == condition$horizon)
-    #choice matrix
-    choices <- expand.grid(0:10, 0:10) #build choice matrix
-    names(choices)<-c("x1","x2")
-    learningCurve <- sapply(1:replications, FUN=function(x){
-      paramSample <- params[sample(1:ncol(params), 1),]
-      kError <- paramSample$kError
-      beta <- paramSample$beta
-      tau <- paramSample$tau
-      reward <-c() #store rewards
-      envNum <- sample(1:20,1) #randomly choose environment
-      #1st trial is random
-      location <- sample(1:121,1)
-      #Observations
-      X1 <- choices[location,'x1']
-      X2 <- choices[location,'x2']
-      reward[1] <- Y <- environments[[envNum]][location,"y"]*100 #pull out rewards
-      #posterior
-      prevPost <- NULL  #initialize previous posterior for sequential updating of BMT posterior
-      for (j in 2:(condition$horizon+1)){ #after that, loop through remaining trials based on inertia-based transition probabilities
-        #compute Manhattan Distances
-        prev <- unlist(manhattan[location,])
-        distance <- sapply(seq(1:121), FUN=function(x) abs(manhattan[x, "x1"] - prev["x1"]) + abs(manhattan[x, "x2"] - prev["x2"]))
-        #set values of 0 to 1
-        distance[distance==0]<-1
-        #update posterior predictions
-        post <- bayesianMeanTracker(x = cbind(X1[j-1],X2[j-1]), y = (reward[j-1] - 50) / 100, prevPost = prevPost, theta = c(kError))  #IMPORTANT, rescale sampled location between 0:29 because bayesianMeanTracker automatically compensates for the input range by adding +1
-        prevPost <- post  #save new posterior as prevPost for next round
-        #compute acquisition function evaluation
-        utilityVec <- ucb(post, pars = c(beta))/ distance
-        #prevent overflow by subtracting max
-        utilityVec <- utilityVec - max(utilityVec)
-        #compute softmax choice probabilities
-        p <- exp(utilityVec/tau)
-        p <- p/sum(p)
-        #Sample next choice
-        location <- sample(1:121,1, prob=p, replace=TRUE)
-        #update reward, X1, X2, and Y for both smooth and rough
-        reward[j] <- environments[[envNum]][location,"y"] * 100
-        X1 <- c(X1, choices[location, 'x1'])
-        X2 <- c(X2, choices[location, 'x2'])
-        Y <- c(Y,  reward[j])}
-      reward})
-  }
-  #Save data
-  learningCurveDF <-data.frame(trial=seq(1:(horizon + 1)),
-                               Environment=rep("Natural", horizon+1),
-                               PayoffCondition = rep(condition$payoff, horizon+1),
-                               Horizon = rep(horizon, horizon+1),
-                               meanReward = rowMeans(learningCurve), #reward averaged over replications
-                               meanSE = apply(learningCurve, 1, FUN = function(x) sd(x)/sqrt(length(x))),
-                               maxReward =  rowMeans(apply(learningCurve, 2, FUN=function(x) maxton(x))), #apply maxton function over columns (trials) to compute the max reward at each time t, and then average the max values over repliations
-                               maxSE =  apply(apply(learningCurve, 2, FUN=function(x) maxton(x)), 1, FUN=function(x)  sd(x)/sqrt(length(x))))
-  
-  #add model 
-  learningCurveDF$Model <- rep(condition$model, nrow(learningCurveDF))
-  #write to csv
-  if(!is.null(outputfile)){
-    write.csv(learningCurveDF, outputfile)
-  }
-  return(learningCurveDF)
 }
+simD$Model <- condition$model
 
-#run simulations and save data
-outputFileName = paste0('rationalModels/learningCurves/',clusterid,'.csv')
-learningCurveDF <- learningCurveSimulation(reps, outputFileName, condition)
-
-
+write.csv(simD, paste0('rationalModels/simulatedData/',outputFileName,'.csv'))
