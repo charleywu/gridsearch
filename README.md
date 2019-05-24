@@ -12,7 +12,9 @@ Wu, C.M., Schulz, E., Speekenbrink, M., Nelson, J.D., Meder, B. (2017). Mapping 
 
 The environments used in Experiments 1 and 2 were generated using `samplePrior1D.py` and `samplePrior2D.py`, which requires numpy, GPy, and Scikit-learn. Experiment 3 uses a variety of agricultural data sampled from the R package `agridat` (see SI for full details), which are saved in `/experiment3/environments/agridat.json`.
 
-99.9% of the rest of the data analysis uses R, with code separated into `\analysis1D`, `\analysis2D`, and `analysis3`. Required packages are specified at the top of each file. Model recovery code has it's own folder called \modelRecovery. Additionally, mismatch simulations are in \mismatch, where empirical simulations for each experiment are in R, while the generalized mismatch simulation is in python using the bayesian optimization library (https://github.com/jmetzen/bayesian_optimization). Mismatch simulations for Experiment 3 are in `\analysis3\mismatch.R`. 
+99.9% of the rest of the data analysis uses R, with code separated into `/analysis1D`, `/analysis2D`, and `/analysis3`. Required packages are specified at the top of each file. Model recovery code has it's own folder called /modelRecovery. Additionally, mismatch simulations are in /mismatch, where empirical simulations for each experiment are in R, while the generalized mismatch simulation is in python using the bayesian optimization library (https://github.com/jmetzen/bayesian_optimization). Mismatch simulations for Experiment 3 are in `/analysis3/mismatch.R`. 
+
+Experiment code is not added as well, which can be found in `/experiment1D`, `/experiment2D`, and `/experiment3`. The code has been modified to remove MySQL functionality, which depended on PHP code that would have exposed credentials. Now experimental conditions are assigned randomly (instead of psuedo-randomly using pre-generated conditions), and experiment data doesn't get saved anymore.
 
 
 ## Authors
