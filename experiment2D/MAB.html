@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="">
+    <meta name="author" content="Charley Wu (based on work by James Chu)">
+    <meta charset="utf-8">
+    <title>Exploring the unknown</title>
+    <script src="https://code.jquery.com/jquery-1.11.1.min.js"></script> 
+    <script src="https://code.jquery.com/ui/1.10.4/jquery-ui.min.js"></script> 
+     <script src="https://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+    <link rel="stylesheet" type="text/css" href="grid2D.css">
+    <link href="https://code.jquery.com/ui/1.10.4/themes/ui-lightness/jquery-ui.css" rel="stylesheet" type="text/css">
+    <!-- Latest compiled and minified CSS -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+ </head>
+    <body>
+         
+         <div class="container">
+            <div class="row">
+         
+
+                <!--Second page contains Ethics statement-->
+                <div id="page1" style="display:block">
+                    <h3>Consent form for participation in this online experiment</h3>
+                    <img border="0" src="images/MPIB_Logo.png" align="center"><br>
+                    <p> Center for Adaptive Behavior and Cogntion (ABC)</p>
+                    <p>THIS STUDY HAS BEEN APPROVED BY THE MPI ETHICS BOARD<br>
+                        Designed by: Charley Wu<br>
+                	      Email: <font color="blue">cwu[at]mpib-berlin[dot]mpg[dot]de</font><br></p>
+                    <h4> Description of Task </h4>
+                    <p>This study is part of a research project conducted by Charley Wu at the Max Planck Institute for Human Development, investigating how people search in an unknown environment. For this purpose you will be asked to perform a simple computer task in which you learn about areas on a grid and uncover rewards.</p>
+
+                    <p> Please read the instruction carefully and try to perform as well as you can. A <b>bonus of up to $1.50</b> will be granted based on your performance, along with a <b>basic fee of $0.50</b> for completing the study. There will be no payment if the study is not completed. The study will on average last about <b>10 minutes</b>. </p>
+
+                    <h4> Data Privacy </h4>
+                    <p>The Max Planck Institute for Human Development is an institution that promotes scientific research. Our work adheres strictly to regulations governing protection of privacy. The information requested in the study will be kept confidential and archived and scientifically processed in accordance with the Data Privacy Act. Personal data will not be passed on to any third parties. The data will be used solely for research purposes and solely within the Max Planck Institute for Human Development or in cooperation with the Max Planck Institute. Experimental data will be handled with utmost discretion. Participation in the study is voluntary and you are able to end your participation at any time. You can revoke your consent to use your data at any time from that date forward.</p>
+ 
+                    
+                    <p>By clicking on the button below, you agree to the following:</p>
+                    <ul>
+                        <li>I have read and accept the terms and conditions listed above and consent to participate in this study. </li>
+                        <li>I understand that I am free to withdraw from the study without penalty if I so wish and I consent to the processing of my experimental data for the purposes of this study only and that it will not be used for any other purpose. </li>
+                        <li>I understand that such information will be treated as strictly confidential and handled in accordance with the provisions of the <a target="_blank" href="http://www.gesetze-im-internet.de/englisch_bdsg/">German Data Privacy Act</a>.</li>
+                        <li>I understand that the information I have submitted will be published as a report. Confidentiality and anonymity will be maintained and it will not be possible to identify me from any publications. </li>
+                        <li>I understand that I am being paid for my assistance in this research.</li>
+                    </ul>
+                    <br>
+                    <button type="button" name="button"; onclick="clickStart('page1','page2'); assignScenario();"; >Agree</button>
+                </div>
+
+                <div id="page2" style="display:none">
+                    <div id="instructions1" style = "display:none">
+                        <h3>Instructions:</h3>
+                        <p><b>Please read the following instructions very carefully: </b></p>
+                        <br>
+                        <p> In the following study, you will be presented with a series of <b>8 different grids to explore</b>. By clicking on tiles in the grid, you reveal points that are associated to the location on the grid. On each grid, you will have <b>either 20 or 40 clicks</b>, with the number of remaining clicks displayed above the grid. When you run out of clicks, you will start a new trial on the next unexplored grid.<p>
+                        <p> Each grid starts with a single tile revealed. Use your mouse to click and reveal new tiles, which will display a number corresponding to the number of points you gain. Revealed tiles are also color coded, as a visual aid to help you in this task. Darker colors correspond to larger rewards. Previously revealed tiles can also be reselected and there may be small changes in the point value.</p>
+                        <p> It is your task to <b>gain as many points as possible</b> across all 8 grids. You will be assigned a bonus of up to $1.50 based on your total score across all grids. </p>
+                        <p><b>Important!</b> Points are clustered along the grid, such that areas with high-value points tend to appear close to each other and areas of low-value points tend to appear close to each other. All payoffs are greater than zero, with the maximum payoff differing between grids. </p>
+                        <p>Below, we show some examples of what the distribution of points are like, with the darker tiles indicating higher point values.</p>
+                        <br><br>
+                    </div>
+                    <div id="instructions2" style = "display:none">
+                        <h3>Instructions:</h3>
+                        <p><b>Please read the following instructions very carefully:</b></p>
+                        <br>
+                        <p> In the following study, you will be presented with a series of <b>8 different grids to explore</b>. By clicking on tiles in the grid, you reveal points that are associated to the location on the grid. On each grid, you will have <b>either 20 or 40 clicks</b>, with the number of remaining clicks displayed above the grid. When you run out of clicks, you will start a new trial on the next unexplored grid.<p>
+                        <p> Each grid starts with a single tile revealed. Use your mouse to click and reveal new tiles, which will display a number corresponding to the number of points you gain. Revealed tiles are also color coded, as a visual aid to help you in this task. Darker colors correspond to larger rewards. Previously revealed tiles can also be reselected and there may be small changes in the point value.</p>
+                        <p> It is your task to <b>learn where the largest reward is</b> in each of the 8 grids. You will be assigned a bonus of up to $1.50 based on the largest value you reveal in each grid. </p>
+                        <p><b>Important!</b> Points are clustered along the grid, such that areas with high-value points tend to appear close to each other and areas of low-value points tend to appear close to each other. All payoffs are greater than zero, with the maximum payoff differing between grids. </p>
+                        <p>Below, we show some examples of what the distribution of points are like, with the darker tiles indicating higher point values.</p>
+                    </div>
+                    <div id='examples'>
+                        <div id='example1' style='display:none'> </div>
+                        <div id='example2' style='display:none'></div>
+                        <div id='example3' style='display:none'></div>
+                        <div id='example4' style='display:none'></div>
+                        <div style="width:500px;margin:0 auto">
+                            <br><br>
+                          <button type="button" name="button" id='exampleButton'; onclick="showExample();"; >Show Example</button>  
+                        </div>
+                    </div>
+                 </div>
+
+
+                <div id="page3" style="display:none">
+                    <fieldset>
+                    <legend>Please answer a few questions about this study before proceeding</legend>
+                    <fieldset style="float:left;width:400px;margin:5px">
+                        What is your task in this study?<br>
+                        <input type="radio" name="q1"  > Learn colors <br>
+                        <input type="radio" name="q1" id="icheck1a" > Gain as many points as possible <br>
+                        <input type="radio" name="q1" id="icheck1b" > Learn where the largest reward is <br>
+                        <input type="radio" name="q1" > I do not know <br>
+                    </fieldset>
+                    <fieldset style="float:left;width:400px;margin:5px">
+                    How many grids are there to explore?<br>
+                        <input type="radio" name="q2"> 1 <br>
+                        <input type="radio" name="q2"> 2 <br>
+                        <input type="radio" name="q2"> 4 <br>
+                        <input type="radio" name="q2" id="icheck2"  > 8 <br>
+                    </fieldset>
+                    <fieldset style="float:left;width:400px;margin:5px">
+                   How are the points distributed?<br>
+                        <input type="radio" name="q3"               >  
+                         Random<br>
+                        <input type="radio" name="q3"               > 
+                         High-value points are never next to each other <br>
+                        <input type="radio" name="q3"               > 
+                         High-value points are always in the same area <br>
+                        <input type="radio" name="q3" id="icheck3"  > 
+                         High-value points tend to be in the same area<br>
+                    </fieldset>
+                    </fieldset>
+
+                    <br><br><br><br>
+                    <p> Only when you answered all the question correctly will you be able to start the study.</p>
+                    <div style="width:500px;margin:0 auto">
+                        <button type="button" name="button"; onclick="instructioncheck()"; >Check answers</button>  
+                    </div>
+                </div>
+
+
+                <div id="page4" style="display:none">
+                    <br><br>
+                    Very good. You have answered all questions correctly and can now start the study. <br><br>
+                    <div style="width:500px;margin:0 auto">
+                        <button type="button" name="button"; onclick="clickStart('page4','page5')"; >Start</button>  
+                    </div>
+                </div>
+
+                <div id="page5" style="display:none">
+                <!-- Begin page content -->
+                    <div class="page-header" id="expHeader1" style = 'display:none'>
+                        <h1> <font size="4">Goal: Gain as many points as possible.</font> </h1>
+                    </div>
+                    <div class="page-header" id="expHeader2" style = 'display:none'>
+                        <h1> <font size="4">Goal: Learn where the largest reward is.</font> </h1>
+                    </div>
+                    <div id="explainexshow" style="display:block">
+                        <p> <b>Summarized Instructions:</b></p>
+                        <p><b>I.</b> Below you see a grid with 11x11 tiles. When you click on a tile, the points of that tile are revealed and its value will be displayed. Tiles are colored, corresponding to the point value. </p>
+                        <p><b>II.</b> Tiles can be repeatedly clicked, although there may be small variations in the points earned. The most recently uncovered point value is displayed, while the history of revealed points can be viewed by hovering over the tile.</p>
+                        <p><b>III.</b> The points of a tile depends upon where it is located, with neighboring tiles tending to have similar point values. </p>
+                        <p><b>IV.</b> On top of the grid, you can see how many clicks you have left, the number of grids left to explore, and the amount of bonus you have currently earned.</p>
+                        <p><b>V.</b> There are 8 different grids with either 20 or 40 clicks in each (alternating).</p>
+                    </div>
+                    <div id='gridDiv'>
+                        <font color="green"><center><b><div id="scoretotal">Reward Earned on Current Trial: $0.00</div></b></center> </font>
+                        <center><div id="remaining1">Number of grids left: <b>8</b></div></center> 
+                        <center><div id="remaining2">Number of clicks left: <b>20</b></div></center> 
+                        <div style="width:350px;margin:0 auto">
+                            <center>
+                            <table id='grid' class='grid'> <tbody></tbody> </table> 
+                            </center>       
+                        </div>
+                        <br><br>
+                    </div>
+                        <div id="page5finished" style="display:none">
+                            <br><br>
+                            <div id="trials"> You have finished exploring this grid. You have 7 more grids to explore. </div>
+                            <br><br>
+                            <div style="width:500px;margin:0 auto">
+                                <button type="button" id="nextTrialButton"; onclick="nexttrial()"; >Continue</button>  
+                            </div>
+                        </div>
+                        <div id="page5guess" style="display:none">
+                            <br><br>
+                            <div id="Guess"> <h1> <font size="4">You have run out of clicks for this grid. Please click the tile where you believe the largest reward is located.</font> </h1> </div>
+                            <br><br>
+                            <div style="width:500px;margin:0 auto">
+                                <button type="button" id="nextTrialButton"; onclick="clickStart('page5guess', 'gridDiv')"; >Continue</button>  
+                            </div>
+                    </div>
+                </div>
+
+                <div id="page6" style="display:none">
+                    <div class="page-header" id="thanksforcompleting" >
+                        <h1> <font size="4">Thank you for completing our study.</font> </h1>
+                    </div>
+              <fieldset>
+              <div>
+                Please check that your <b>MTurk ID</b> is correct. If not entered correctly, you may not be able to receive your bonus.<br><br>
+                <form>
+                    MTurk ID:<br>
+                    <input type="text" id="MTurkID"><br>
+                </form>
+                </div> <br>
+              <div>
+                How old are you?<br>
+                <input id="age1" type="radio" name="age" value="20" > 18-25<br>
+                <input id="age2" type="radio" name="age" value="30" > 26-35<br>
+                <input id="age3" type="radio" name="age" value="40" > 36-50<br>
+                <input id="age4" type="radio" name="age" value="50" > 
+                 above 50<br>
+              </div><br>
+              <div>
+                What's your gender?<br>
+                <input id="gender1" type="radio" name="gender" value="0" > Female<br>
+                <input id="gender2" type="radio" name="gender" value="1" > Male<br>
+              </div><br>
+              <div>
+              <form>Please let us know what strategies you used when searching the grids: <br>
+                <textarea cols="40" rows="5" id = "processDescription" name="Comments"> How did you try to increase your performance bonus?</textarea><br><br>
+              </form>
+              </div>
+              </fieldset>                    
+                    <div style="width:50px;margin:0 auto">
+                        <button type="button" name="button"; onclick="senddata()"; >Done</button>
+                    </div>
+                </div>
+
+                <div id="page7" style="display:none">
+                    <h3>Thank you for participating in our experiment.</h3>
+                    <div id="bonus"> You have achieved a bonus of $0.00 </div>
+                    <p> To earn your base fee of $0.50, please copy and paste the following completion code into the Amazon MTurk window for this HIT: <b>MAB2016</b> </p>
+                </div>
+
+            </div>
+        </div>
+        <script src="js/gridSearch.js" charset="utf-8"></script>
+    </body>
+</html>

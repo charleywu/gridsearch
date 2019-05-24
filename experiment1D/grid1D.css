@@ -1,0 +1,21 @@
+.grid td {
+    width: 25px;
+    height: 25px;
+    border: 1px solid #0082C1;
+    font-size: 12px;
+    color: white;
+    -webkit-user-select: none; /* Safari */        
+    -moz-user-select: none; /* Firefox */
+    -ms-user-select: none; /* IE10+/Edge */
+    user-select: none;
+    cursor: pointer;
+    margin-top:20px;
+}
+
+.gridEx td {
+    width: 25px;
+    height: 25px;
+    border: 1px solid #0082C1;
+    font-size: 12px;
+}
+
